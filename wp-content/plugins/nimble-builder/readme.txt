@@ -6,7 +6,7 @@ Tags: page builder, visual editor, customizer, drag and drop, header, footer, la
 Requires at least: 4.7
 Requires PHP: 5.4
 Tested up to: 5.4
-Stable tag: 2.0.4
+Stable tag: 2.0.10
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=8FMNQPU36U27J&source=url
@@ -120,10 +120,47 @@ We have also published a detailed [troubleshooting guide for Nimble Builder](htt
 If you can't troubleshoot your issue, please open a new thread in [Nimble Builder support forum](https://wordpress.org/support/plugin/nimble-builder/).
 
 == Upgrade Notice ==
-= 2.0.4 =
-Google fonts and page load performance improvements.
+= 2.0.10 =
+Added support for password protected page / post. [grid module] Focus on post grid when navigating pagination. [shortcode module] Fixed possible lazy loading problem with third party plugins. Improved RTL support in the customizer UI.
 
 == Changelog ==
+= 2.0.10 April 24th 2020 =
+* fixed : [Password protected pages/posts] Nimble Builder content ( excluding header and footer ) should not be revealed before password submission
+* fixed : [RTL][customizer][nimble top menu] broken in RTL mode => all items are in the same place
+* improved : [grid module] updated pagination urls to ensure user focus on grid module when navigating post pages
+* added : [shortcode module][performance] lazy loading can break shortcodes
+
+= 2.0.9 April 24th 2020 =
+* fixed : [slider module] lazy loading broken, leading to extra space on top and bottom of the slider
+* fixed : [PHP compatibility] PHP notice with PHP 7.4.2 ( Array and string offset access syntax with curly braces is deprecated )
+* fixed : [import/export] Site wide import/export doesn’t work
+* fixed : [Lazy load][Performance] make sure images are lazy loaded when dynamic content is inserted in the DOM ( via ajax )
+* fixed : [Lazy load][Performance] when images are set to display:none; lazyload is fired even when an image is off the viewport
+* fixed : [search] the found_posts number updated with Nimble Builder results is not correct when search results are paginated
+* updated : name of the WP editor module to Rich Text Editor
+* added : [performance][shortcode module] support for image lazy loading
+
+= 2.0.8 April 17th 2020 =
+* fixed : [column][responsive] custom margins on columns not considered when calculating responsive width for mobile devices
+* fixed : [column][responsive] custom margins should be inherited if not set for a device, when calculating responsive width for mobile devices
+* fixed : [customizer][spacing input] when switching device, the unit of the input value is inconsistent with the one actually active
+* fixed : [customizer] make sure the font-size of "Insert a new section here" is set by Nimble Builder
+
+= 2.0.7 April 15th 2020 =
+* fixed : [grid module] pagination broken when used on home when home is a static page
+* fixed : [grid module] lazy loading images might break when customizing grids. Disabled when customizing.
+* improved : [grid module] better pagination CSS design
+
+= 2.0.6 April 14th 2020 =
+* fixed : [customizer] modules visibility settings should gray out hidden modules instead of removing them during customization
+* added : [Import/Export] new option to skip image import
+
+= 2.0.5 April 12th 2020 =
+* fixed : [performance] prevent trying to register modules when is_admin()
+* fixed : [HTML][CSS] custom css class name broken in the module markup
+* fixed : [Grid module] pagination could be broken in some cases.
+* added : [SEO] Nimble Builder content is now included to Yoast SEO analyser's tool when editing a page or post
+
 = 2.0.4 March 28th 2020 =
 * improved : [performances][Google fonts] added param "display=swap" to ensure text remains visible during webfont load
 * improved :  [Performance] make sure no enqueued script / inline script / preload stylesheet is printed when no Nimble Sections to print
@@ -134,44 +171,3 @@ Google fonts and page load performance improvements.
 * added : [carousel module] a css loader until initialization of the slider
 * improved : [lazyload] lazyload js should not be ran when disabled in options
 * improved : [CSS] always re-generate front dynamic stylesheet when user is logged in and has "customize" capabilities
-
-= 2.0.2 March 22nd 2020 =
-* fixed : [slider module][UI] make sure there's an available img size to use for the slide thumbnail
-* improved : [performance] options for javascript
-
-= 2.0.1 March 18th 2020 =
-* fixed : [visibility option] visibility setting not working
-
-= 2.0.0 March 13th 2020 =
-* fixed : [acessibility] Buttons do not have an accessible name
-* fixed : [social icons module][accessibility] Links do not have a discernible name
-* fixed : [slider module] when lazy loading active, make sure all slides are always lazyloaded, both when moving a section when customizing and navigating the slides
-* fixed : [performance] removed fetching for material-icons, not used anymore
-* fixed : [carousel module][performance] lazyload breaks the last image
-* fixed : [performance] make sure lazyload is triggered when refreshing sections during customization
-* improved : [performance] added a set of options to improve Nimble Builder performance when loading stylesheets and javascript files
-* improved : [performance] scripts are now loaded in defer mode to minimize render blocking issues on page load
-* improved : [performance] stylesheets can be loaded in partial mode
-* improved : [performance] Google fonts now be preloaded by default for minimal impact on page load
-* improved : [performance] Font Awesome icons are now loaded asynchronously by default to avoid blocking rendering problems
-* improved : [performance] if activated, smartload should also work when customizing
-
-= 1.10.12 March 3rd 2020 =
-* fixed : when a multi-item module, like carousel or social icon, is updated, its value should be cast as an array
-* fixed : [responsive columns] custom column width might not be applied when using a custom breakpoint < 768px
-* fixed : [nested sections] duplicating a nested section should trigger a preview refresh in order to regenerate a proper column layout
-* fixed : [carousel module] disable autoplay by default
-* updated : [carousel module] set default navigation to arrows only, not arrows + dots
-* fixed : [CSS grid] columns of a section with property "flex-direction: column-reverse" needs to be set on "flex:auto"
-* fixed : [breakpoint] possible php error notice when custom breakpoint is set to an empty value
-* updated : use "adapt images to carousel's width" instead of "Nimble wizard" by default
-* improved : [performance] avoid potential multiple db queries when fetching the sektion posts
-* improved : [performance] added an experiment to load some of the largest module stylesheets per module instead of bundled in the main one. Can be enabled with constants in wp-config : NIMBLE_USE_SPLIT_STYLESHEET, NIMBLE_PRINT_MODULE_STYLESHEETS_INLINE
-
-= 1.10.11 February 29th 2020 =
-* fixed : figcaption => adjust margin top only when wrapped inside .wp-caption
-* fixed : [accordion module] wrong cursor pointer on +/- icons
-* fixed : [WP Widget module] implement basic styling for WP search form
-* improved : [performance] lazyload => implement a better deferral of offscreen images on page load and apply a higher threshold when scrolling
-* improved : [performance] removed unused CSS => reduced size of main CSS stylesheet
-* improved : [performance] removed Poppin Google font for prebuild menu sections
