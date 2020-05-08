@@ -328,7 +328,7 @@ function sek_set_mq_css_rules( $params, $rules ) {
             sek_error_log( __FUNCTION__ . ' => missing level id, needed to determine if there is a custom breakpoint to use', $params );
         } else {
             $level_id = $params['level_id'];
-            $tablet_breakpoint = sek_get_user_defined_tablet_breakpoint_for_css_rules( $level_id );// default is Sek_Dyn_CSS_Builder::$breakpoints['md'] <=> max-width: 768
+            $tablet_breakpoint = sek_get_section_or_global_tablet_breakpoint_for_css_rules( $level_id, $for_responsive_columns = false );// default is Sek_Dyn_CSS_Builder::$breakpoints['md'] <=> max-width: 768
 
             // If user define breakpoint ( => always for tablet ) is < to $mobile_breakpoint, make sure $mobile_breakpoint is reset to tablet_breakpoint
             $mobile_breakpoint = $mobile_breakpoint >= $tablet_breakpoint ? $tablet_breakpoint : $mobile_breakpoint;
@@ -336,19 +336,19 @@ function sek_set_mq_css_rules( $params, $rules ) {
     }
 
     $css_value_by_devices = $params['value'];
-    $_font_size_mq = array('desktop' => null , 'tablet' => null , 'mobile' => null );
+    $media_q = array('desktop' => null , 'tablet' => null , 'mobile' => null );
 
     if ( !empty( $css_value_by_devices ) ) {
           if ( ! empty( $css_value_by_devices[ 'desktop' ] ) ) {
-              $_font_size_mq[ 'desktop' ] = null;
+              $media_q[ 'desktop' ] = null;
           }
 
           if ( ! empty( $css_value_by_devices[ 'tablet' ] ) ) {
-              $_font_size_mq[ 'tablet' ]  = '(max-width:'. ( $tablet_breakpoint - 1 ) . 'px)'; // default is max-width: 767
+              $media_q[ 'tablet' ]  = '(max-width:'. ( $tablet_breakpoint - 1 ) . 'px)'; // default is max-width: 767
           }
 
           if ( ! empty( $css_value_by_devices[ 'mobile' ] ) ) {
-              $_font_size_mq[ 'mobile' ]  = '(max-width:'. ( $mobile_breakpoint - 1 ) . 'px)'; // default is max-width: 575
+              $media_q[ 'mobile' ]  = '(max-width:'. ( $mobile_breakpoint - 1 ) . 'px)'; // default is max-width: 575
           }
 
           // $css_value_by_devices looks like
@@ -378,7 +378,7 @@ function sek_set_mq_css_rules( $params, $rules ) {
                   $rules[] = array(
                       'selector' => $params['selector'],
                       'css_rules' => $css_rules,
-                      'mq' => $_font_size_mq[ $device ]
+                      'mq' => $media_q[ $device ]
                   );
               }
           }
@@ -452,7 +452,7 @@ function sek_set_mq_css_rules_supporting_vendor_prefixes( $params, $rules ) {
             sek_error_log( __FUNCTION__ . ' => missing level id, needed to determine if there is a custom breakpoint to use', $params );
         } else {
             $level_id = $params['level_id'];
-            $tablet_breakpoint = sek_get_user_defined_tablet_breakpoint_for_css_rules( $level_id );// default is Sek_Dyn_CSS_Builder::$breakpoints['md'] <=> max-width: 768
+            $tablet_breakpoint = sek_get_section_or_global_tablet_breakpoint_for_css_rules( $level_id, $for_responsive_columns = false );// default is Sek_Dyn_CSS_Builder::$breakpoints['md'] <=> max-width: 768
 
             // If user define breakpoint ( => always for tablet ) is < to $mobile_breakpoint, make sure $mobile_breakpoint is reset to tablet_breakpoint
             $mobile_breakpoint = $mobile_breakpoint >= $tablet_breakpoint ? $tablet_breakpoint : $mobile_breakpoint;
@@ -460,25 +460,25 @@ function sek_set_mq_css_rules_supporting_vendor_prefixes( $params, $rules ) {
     }
 
     $css_rules_by_device = $params['css_rules_by_device'];
-    $_font_size_mq = array('desktop' => null , 'tablet' => null , 'mobile' => null );
+    $media_q = array('desktop' => null , 'tablet' => null , 'mobile' => null );
 
     if ( !empty( $css_rules_by_device ) ) {
           if ( ! empty( $css_rules_by_device[ 'desktop' ] ) ) {
-              $_font_size_mq[ 'desktop' ] = null;
+              $media_q[ 'desktop' ] = null;
           }
 
           if ( ! empty( $css_rules_by_device[ 'tablet' ] ) ) {
-              $_font_size_mq[ 'tablet' ]  = '(max-width:'. ( $tablet_breakpoint - 1 ) . 'px)'; //max-width: 767
+              $media_q[ 'tablet' ]  = '(max-width:'. ( $tablet_breakpoint - 1 ) . 'px)'; //max-width: 767
           }
 
           if ( ! empty( $css_rules_by_device[ 'mobile' ] ) ) {
-              $_font_size_mq[ 'mobile' ]  = '(max-width:'. ( $mobile_breakpoint - 1 ) . 'px)'; //max-width: 575
+              $media_q[ 'mobile' ]  = '(max-width:'. ( $mobile_breakpoint - 1 ) . 'px)'; //max-width: 575
           }
           foreach ( $css_rules_by_device as $device => $rules_for_device ) {
               $rules[] = array(
                   'selector' => $params['selector'],
                   'css_rules' => $rules_for_device,
-                  'mq' => $_font_size_mq[ $device ]
+                  'mq' => $media_q[ $device ]
               );
           }
     } else {
@@ -496,18 +496,24 @@ function sek_set_mq_css_rules_supporting_vendor_prefixes( $params, $rules ) {
 // BREAKPOINT HELPER
 // A custom breakpoint can be set globally or by section
 // It replaces the default tablet breakpoint ( 768 px )
-function sek_get_user_defined_tablet_breakpoint_for_css_rules( $level_id = '' ) {
+//
+// the 'for_responsive_columns' param has been introduced for https://github.com/presscustomizr/nimble-builder/issues/564
+// so we can differentiate when the custom breakpoint is requested for column responsiveness or for css rules generation
+// when for columns, we always apply the custom breakpoint defined by the user
+// otherwise, when generating CSS rules like alignment, the custom breakpoint is applied if user explicitely checked the 'apply_to_all' option
+// 'for_responsive_columns' is set to true when sek_get_closest_section_custom_breakpoint() is invoked from Nimble_Manager()::render()
+function sek_get_section_or_global_tablet_breakpoint_for_css_rules( $level_id = '', $for_responsive_columns = false ) {
     //sek_error_log('ALORS CLOSEST PARENT SECTION MODEL ?' . $level_id , sek_get_closest_section_custom_breakpoint( $level_id ) );
 
     // define a default breakpoint : 768
-    $tablet_breakpoint = Sek_Dyn_CSS_Builder::$breakpoints['md'];
+    $tablet_breakpoint = Sek_Dyn_CSS_Builder::$breakpoints[Sek_Dyn_CSS_Builder::COLS_MOBILE_BREAKPOINT];//COLS_MOBILE_BREAKPOINT = 'md' <=> 768px
 
     // Is there a custom breakpoint set by a parent section?
     // Order :
     // 1) custom breakpoint set on a nested section
     // 2) custom breakpoint set on a regular section
     //sek_error_log('WE SEARCH FOR => ' . $level_id );
-    $closest_section_custom_breakpoint = sek_get_closest_section_custom_breakpoint( array( 'searched_level_id' => $level_id ) );
+    $closest_section_custom_breakpoint = sek_get_closest_section_custom_breakpoint( array( 'searched_level_id' => $level_id, 'for_responsive_columns' => false ) );
     //sek_error_log('WE FOUND A BREAKPOINT ', $closest_section_custom_breakpoint  );
 
     if ( is_array( $closest_section_custom_breakpoint ) ) {
@@ -967,7 +973,9 @@ function sek_extract_css_font_family_from_customizer_option( $family ) {
 // The base fmk is loaded @after_setup_theme:10
 add_action( 'after_setup_theme', '\Nimble\sek_schedule_module_registration', 50 );
 
-// When not customizing, we don't need to register all modules
+// On front we register only the necessary modules
+// When customizing, we register all of them
+// On admin, we register none
 function sek_schedule_module_registration() {
     // we load all modules when :
     // 1) customizing
@@ -982,7 +990,11 @@ function sek_schedule_module_registration() {
         // prebuilt sections are registered from a JSON since https://github.com/presscustomizr/nimble-builder/issues/431
         sek_register_prebuilt_section_modules();
     } else {
-        add_action( 'wp', '\Nimble\sek_register_modules_when_not_customizing_and_not_ajaxing', PHP_INT_MAX );
+        // Condition !is_admin() added in april 2020
+        // fixes https://github.com/presscustomizr/nimble-builder/issues/658
+        if ( !is_admin() ) {
+            add_action( 'wp', '\Nimble\sek_register_active_modules_on_front', PHP_INT_MAX );
+        }
     }
 }
 
@@ -1003,12 +1015,16 @@ function sek_register_modules_when_customizing_or_ajaxing() {
     sek_do_register_module_collection( $modules );
 }
 
-
-
 // @return void();
 // @hook 'wp'@PHP_INT_MAX
-function sek_register_modules_when_not_customizing_and_not_ajaxing() {
-    $contextually_actives_raw = sek_get_collection_of_contextually_active_modules();
+function sek_register_active_modules_on_front() {
+    sek_register_modules_when_not_customizing_and_not_ajaxing();
+}
+
+
+// @param $skope_id added in april 2020 for for https://github.com/presscustomizr/nimble-builder/issues/657
+function sek_register_modules_when_not_customizing_and_not_ajaxing( $skope_id = '' ) {
+    $contextually_actives_raw = sek_get_collection_of_contextually_active_modules( $skope_id );
     $contextually_actives_raw = array_keys( $contextually_actives_raw );
 
     $contextually_actives_candidates = array();
@@ -2322,24 +2338,84 @@ function sek_add_css_rules_for_spacing( $rules, $level ) {
     if ( ! is_array( $pad_marg_options ) )
       return $rules;
 
+    // GENERATE SPACING RULES BY DEVICE
     $rules = sek_generate_css_rules_for_spacing_with_device_switcher( $rules, $pad_marg_options, '[data-sek-id="'.$level['id'].'"]' );
 
+    // ADAPT COLUMN WIDTH IF A MARGIN IS SET, BY DEVICE
+    // april 2020 : fixes https://github.com/presscustomizr/nimble-builder/issues/665
     // if the column has a positive ( > 0 ) margin-right and / or a margin-left set , let's adapt the column widths so we fit the 100%
-    if ( 'column' === $level['level'] && ! empty( $pad_marg_options['desktop'] ) ) {
-        $margin_left = array_key_exists('margin-left', $pad_marg_options['desktop'] ) ? $pad_marg_options['desktop']['margin-left'] : 0;
-        $margin_right = array_key_exists('margin-right', $pad_marg_options['desktop'] ) ? $pad_marg_options['desktop']['margin-right'] : 0;
-        $device_unit = array_key_exists('unit', $pad_marg_options['desktop'] ) ? $pad_marg_options['desktop']['unit'] : 'px';
+    if ( 'column' === $level['level'] ) {
 
-        $total_horizontal_margin = (int)$margin_left + (int)$margin_right;
+        // Declare 'not_set' values here that will be only set if there are margin option set for the column
+        $parent_section = 'not_set';
+        $column_breakpoint = 'not_set';
 
-        $parent_section = sek_get_parent_level_model( $level['id'] );
-        if ( 'no_match' === $parent_section ) {
-            sek_error_log( __FUNCTION__ . ' => $parent_section not found for level id : ' . $level['id'] );
-            return $rules;
+        foreach (['desktop', 'tablet', 'mobile'] as $_device ) {
+            $pad_marg_options[$_device] = !empty($pad_marg_options[$_device]) ? $pad_marg_options[$_device] : array();
+            if ( 'not_set' === $parent_section ) {
+                $parent_section = sek_get_parent_level_model( $level['id'] );
+                if ( 'no_match' === $parent_section ) {
+                    sek_error_log( __FUNCTION__ . ' => $parent_section not found for level id : ' . $level['id'] );
+                    break;
+                }
+            }
+            if ( 'not_set' === $column_breakpoint ) {
+                // COLUMN BREAKPOINT
+                // define a default breakpoint : 768
+                $column_breakpoint = Sek_Dyn_CSS_Builder::$breakpoints[Sek_Dyn_CSS_Builder::COLS_MOBILE_BREAKPOINT];//COLS_MOBILE_BREAKPOINT = 'md' <=> 768px
+
+                // Is there a global custom breakpoint set ?
+                $global_custom_breakpoint = intval( sek_get_global_custom_breakpoint() );
+                $has_global_custom_breakpoint = $global_custom_breakpoint >= 1;
+
+                // Does the parent section have a custom breakpoint set ?
+                $section_custom_breakpoint = intval( sek_get_section_custom_breakpoint( array( 'section_model' => $parent_section, 'for_responsive_columns' => true ) ) );
+                $has_section_custom_breakpoint = $section_custom_breakpoint >= 1;
+                if ( $has_section_custom_breakpoint ) {
+                    $column_breakpoint = $section_custom_breakpoint;
+                } else if ( $has_global_custom_breakpoint ) {
+                    $column_breakpoint = $global_custom_breakpoint;
+                }
+            }
+
+            $rules = sek_process_column_width_for_device( array(
+                'device' => $_device,
+                'rules' => $rules,
+                'pad_marg_options' => $pad_marg_options,
+                'level' => $level,
+                'parent_section' => $parent_section,
+                'column_breakpoint' => $column_breakpoint,
+                'has_global_custom_breakpoint' => $has_global_custom_breakpoint,
+                'has_section_custom_breakpoint' => $has_section_custom_breakpoint
+            ));
         }
+    }
+    return $rules;
+}
 
-        if ( $total_horizontal_margin > 0 && is_array( $parent_section ) && !empty( $parent_section ) ) {
-            $total_horizontal_margin_with_unit = $total_horizontal_margin . $device_unit;//20px
+
+// @return array of $rules
+function sek_process_column_width_for_device( $params ) {
+    $_device = $params['device'];
+    $rules = $params['rules'];
+    $pad_marg_options = $params['pad_marg_options'];
+    $level = $params['level'];
+    $parent_section = $params['parent_section'];
+    $column_breakpoint = $params['column_breakpoint'];
+    $has_global_custom_breakpoint = $params['has_global_custom_breakpoint'];
+    $has_section_custom_breakpoint = $params['has_section_custom_breakpoint'];
+
+
+    // RECURSIVELY CALCULATE TOTAL HORIZONTAL MARGIN FOR THE DEVICE, OR THE ONE INHERITED FROM WIDER ONES
+    // implemented for https://github.com/presscustomizr/nimble-builder/issues/665
+    $total_horizontal_margin_with_unit = sek_get_maybe_inherited_total_horizontal_margins( $_device, $pad_marg_options );
+
+    // WRITE RULES
+    switch ( $_device ) {
+        case 'desktop':
+            // no valid parent section ? stop here
+            if ( !is_array( $parent_section ) || empty( $parent_section) )
+              return $rules;
 
             $col_number = ( array_key_exists( 'collection', $parent_section ) && is_array( $parent_section['collection'] ) ) ? count( $parent_section['collection'] ) : 1;
             $col_number = 12 < $col_number ? 12 : $col_number;
@@ -2374,22 +2450,13 @@ function sek_add_css_rules_for_spacing( $rules, $level ) {
             if ( $col_suffix < 1 )
               return $rules;
 
-            // define a default breakpoint : 768
-            $breakpoint = Sek_Dyn_CSS_Builder::$breakpoints[ Sek_Dyn_CSS_Builder::COLS_MOBILE_BREAKPOINT ];//COLS_MOBILE_BREAKPOINT = 'md' <=> 768px
-
             // define a default selector
+            // will be more specific depending on the fact that a local or global custom breakpoint is set
             $selector = sprintf('[data-sek-level="location"] [data-sek-id="%1$s"] .sek-sektion-inner > .sek-col-%2$s[data-sek-id="%3$s"]', $parent_section['id'], $col_suffix, $level['id'] );
 
-            // Is there a global custom breakpoint set ?
-            $global_custom_breakpoint = intval( sek_get_global_custom_breakpoint() );
-            $has_global_custom_breakpoint = $global_custom_breakpoint >= 1;
 
-            // Does the parent section have a custom breakpoint set ?
-            $section_custom_breakpoint = intval( sek_get_section_custom_breakpoint( array( 'section_model' => $parent_section, 'for_responsive_columns' => true ) ) );
-            $has_section_custom_breakpoint = $section_custom_breakpoint >= 1;
-
+            // SELECTOR DEPENDING ON THE CUSTOM BREAKPOINT
             if ( $has_section_custom_breakpoint ) {
-                $breakpoint = $section_custom_breakpoint;
                 // In this case, we need to use ".sek-section-custom-breakpoint-col-{}"
                 // @see sek_add_css_rules_for_sections_breakpoint
                 $selector =  sprintf('[data-sek-level="location"] [data-sek-id="%1$s"] .sek-sektion-inner > .sek-section-custom-breakpoint-col-%2$s[data-sek-id="%3$s"]', $parent_section['id'], $col_suffix, $level['id'] );
@@ -2397,20 +2464,36 @@ function sek_add_css_rules_for_spacing( $rules, $level ) {
                 // In this case, we need to use ".sek-global-custom-breakpoint-col-{}"
                 // @see sek_add_css_rules_for_sections_breakpoint
                 $selector =  sprintf('[data-sek-level="location"] [data-sek-id="%1$s"] .sek-sektion-inner > .sek-global-custom-breakpoint-col-%2$s[data-sek-id="%3$s"]', $parent_section['id'], $col_suffix, $level['id'] );
-                $breakpoint = $global_custom_breakpoint;
             }
 
             // Format width in percent with 3 digits after decimal
             $col_width_in_percent = number_format( $col_width_in_percent, 3 );
-            $responsive_css_rules = sprintf( '-ms-flex: 0 0 calc(%1$s%% - %2$s) ;flex: 0 0 calc(%1$s%% - %2$s);max-width: calc(%1$s%% - %2$s)', $col_width_in_percent, $total_horizontal_margin_with_unit );
+            $responsive_css_rules_for_desktop = sprintf( '-ms-flex: 0 0 calc(%1$s%% - %2$s) ;flex: 0 0 calc(%1$s%% - %2$s);max-width: calc(%1$s%% - %2$s)', $col_width_in_percent, $total_horizontal_margin_with_unit );
 
             // we need to override the rule defined in : Sek_Dyn_CSS_Builder::sek_add_rules_for_column_width
             // that's why we use a long specific selector here
             $rules[] = array(
                 'selector' => $selector,
-                'css_rules' => $responsive_css_rules,
-                'mq' => "(min-width: {$breakpoint}px)"
+                'css_rules' => $responsive_css_rules_for_desktop,
+                'mq' => "(min-width: {$column_breakpoint}px)"
             );
+        break;
+
+        case 'tablet':
+            // the horizontal margin should be subtracted also to the column width of 100%, below the mobile breakpoint: basically the margin should be always subtracted to the column width for each viewport it is set
+            // @see https://github.com/presscustomizr/nimble-builder/issues/217
+            $responsive_css_rules_for_100_percent_width = sprintf( '-ms-flex: 0 0 calc(%1$s%% - %2$s) ;flex: 0 0 calc(%1$s%% - %2$s);max-width: calc(%1$s%% - %2$s)', 100, $total_horizontal_margin_with_unit );
+            $rules[] = array(
+                'selector' => sprintf('.sek-sektion-inner > [data-sek-id="%1$s"]', $level['id'] ),
+                'css_rules' => $responsive_css_rules_for_100_percent_width,
+                'mq' => "(max-width: {$column_breakpoint}px)"
+            );
+        break;
+
+        case 'mobile':
+            $mobile_breakpoint = Sek_Dyn_CSS_Builder::$breakpoints['sm'];//max-width: 576
+            // If user define breakpoint ( => that determines the column_breakpoint ) is < to $mobile_breakpoint, make sure $mobile_breakpoint is reset to column_breakpoint
+            $mobile_breakpoint = $mobile_breakpoint >= $column_breakpoint ? $column_breakpoint : $mobile_breakpoint;
 
             // the horizontal margin should be subtracted also to the column width of 100%, below the mobile breakpoint: basically the margin should be always subtracted to the column width for each viewport it is set
             // @see https://github.com/presscustomizr/nimble-builder/issues/217
@@ -2418,16 +2501,44 @@ function sek_add_css_rules_for_spacing( $rules, $level ) {
             $rules[] = array(
                 'selector' => sprintf('.sek-sektion-inner > [data-sek-id="%1$s"]', $level['id'] ),
                 'css_rules' => $responsive_css_rules_for_100_percent_width,
-                //$breakpoint_for_100_percent_width = $breakpoint-1;
-                'mq' => null,// "(max-width: {$breakpoint_for_100_percent_width}px)"
+                'mq' => "(max-width: {$mobile_breakpoint}px)"
             );
-            //sek_error_log('padding margin', $rules );
-        }//if ( $total_horizontal_margin > 0 && !empty( $parent_section ) ) {
-    }// if column
+        break;
+    }//switch device
 
+    //sek_error_log('padding margin', $rules );
     return $rules;
 }
 
+
+
+// Recursive helper to get the total horizontal margin of the current device
+// or the one inherited from the parent device
+// implemented for https://github.com/presscustomizr/nimble-builder/issues/665
+function sek_get_maybe_inherited_total_horizontal_margins( $_device, $pad_marg_options ) {
+      $total_horizontal_margin_with_unit = '0px';
+      if ( array_key_exists('margin-left', $pad_marg_options[$_device] ) || array_key_exists('margin-right', $pad_marg_options[$_device] ) ) {
+          $margin_left = array_key_exists('margin-left', $pad_marg_options[$_device] ) ? $pad_marg_options[$_device]['margin-left'] : 0;
+          $margin_right = array_key_exists('margin-right', $pad_marg_options[$_device] ) ? $pad_marg_options[$_device]['margin-right'] : 0;
+          $device_unit = array_key_exists('unit', $pad_marg_options[$_device] ) ? $pad_marg_options[$_device]['unit'] : 'px';
+          $total_horizontal_margin = (int)$margin_left + (int)$margin_right;
+
+          // IF NO HORIZONTAL MARGIN, LET'S STOP HERE
+          if ( $total_horizontal_margin <= 0 ) {
+              return $total_horizontal_margin_with_unit;
+          }
+
+          return $total_horizontal_margin . $device_unit;//example : 20px
+      } else {
+          $device_hierarchy = array( 'mobile' , 'tablet', 'desktop' );
+          $device_index = array_search( $_device, $device_hierarchy );
+          if ( $device_index < ( count( $device_hierarchy ) - 1 ) ) {
+              $next_device = $device_hierarchy[ $device_index + 1 ];
+              return sek_get_maybe_inherited_total_horizontal_margins( $next_device, $pad_marg_options );
+          }
+      }
+      return $total_horizontal_margin_with_unit;
+}
 ?><?php
 //Fired in add_action( 'after_setup_theme', 'sek_register_modules', 50 );
 function sek_get_module_params_for_sek_level_width_module() {
@@ -3548,6 +3659,18 @@ function sek_get_module_params_for_sek_local_imp_exp() {
                     'refresh_stylesheet' => false,
                     'refresh_preview' => true,
                     'notice_after' => __( 'Check this option if you want to keep the existing sections of this page, and combine them with the imported ones.', 'nimble-builder'),
+                ),
+                // april 2020 : introduced for https://github.com/presscustomizr/nimble-builder/issues/663
+                'import_img' => array(
+                    'input_type'  => 'nimblecheck',
+                    'title'       => __('Import images in your media library.', 'nimble-builder'),
+                    'default'     => 1,
+                    'title_width' => 'width-80',
+                    'input_width' => 'width-20',
+                    'refresh_markup' => false,
+                    'refresh_stylesheet' => false,
+                    'refresh_preview' => true,
+                    'notice_after' => __( 'When this option is unchecked, Nimble Builder will not import images and use instead the url of the original images.', 'nimble-builder'),
                 )
             )
         )//tmpl
@@ -4379,6 +4502,19 @@ function sek_get_module_params_for_sek_global_imp_exp() {
                     'html_before' => sprintf('<span class="czr-notice">%1$s</span><br/>',__('These options allows you to export and import global sections like a global header-footer.', 'nimble-builder') )
                     // 'notice_after' => __('Select a revision from the drop-down list to preview it. You can then restore it by clicking the Publish button at the top of the page.', 'text_doma')
                 ),
+                // april 2020 : introduced for https://github.com/presscustomizr/nimble-builder/issues/663
+                // https://github.com/presscustomizr/nimble-builder/issues/676
+                'import_img' => array(
+                    'input_type'  => 'nimblecheck',
+                    'title'       => __('Import images in your media library.', 'nimble-builder'),
+                    'default'     => 1,
+                    'title_width' => 'width-80',
+                    'input_width' => 'width-20',
+                    'refresh_markup' => false,
+                    'refresh_stylesheet' => false,
+                    'refresh_preview' => true,
+                    'notice_after' => __( 'When this option is unchecked, Nimble Builder will not import images and use instead the url of the original images.', 'nimble-builder'),
+                )
                 // 'keep_existing_sections' => array(
                 //     'input_type'  => 'nimblecheck',
                 //     'title'       => __('Combine the imported sections with the current ones.', 'text_doma'),
@@ -8041,14 +8177,6 @@ function sek_get_module_params_for_czr_post_grid_main_child() {
                     'step'        => 1,
                     'width-100'   => true
                 ),//0,
-                'display_pagination' => array(
-                    'input_type'  => 'nimblecheck',
-                    'title'       => __('Display pagination links', 'nimble-builder'),
-                    'default'     => false,
-                    'title_width' => 'width-80',
-                    'input_width' => 'width-20'
-                    //'html_before' => '<hr>'
-                ),
                 'posts_per_page'  => array(
                     'input_type'  => 'range_simple',
                     'title'       => __( 'Posts per page', 'nimble-builder' ),
@@ -8059,6 +8187,14 @@ function sek_get_module_params_for_czr_post_grid_main_child() {
                     'width-100'   => true,
                     'title_width' => 'width-100'
                 ),//0,
+                'display_pagination' => array(
+                    'input_type'  => 'nimblecheck',
+                    'title'       => __('Display pagination links', 'nimble-builder'),
+                    'default'     => false,
+                    'title_width' => 'width-80',
+                    'input_width' => 'width-20'
+                    //'html_before' => '<hr>'
+                ),
                 'categories'  => array(
                     'input_type'  => 'category_picker',
                     'title'       => __( 'Filter posts by category', 'nimble-builder' ),
@@ -10479,6 +10615,13 @@ function sek_get_module_params_for_czr_shortcode_module() {
                     'refresh_markup' => false,
                     'refresh_stylesheet' => false,
                 ),
+                'lazyload' => array(
+                    'input_type'  => 'nimblecheck',
+                    'title'       => __('Enable image lazy-loading', 'nimble-builder'),
+                    'default'     => false,
+                    'title_width' => 'width-80',
+                    'input_width' => 'width-20'
+                ),
                 // flex-box should be enabled by user and not active by default.
                 // It's been implemented primarily to ease centering ( see https://github.com/presscustomizr/nimble-builder/issues/565 )
                 // When enabled, it can create layout issues like : https://github.com/presscustomizr/nimble-builder/issues/576
@@ -12608,10 +12751,7 @@ if ( ! class_exists( 'SEK_Front_Construct' ) ) :
 
             // AJAX
             $this->_schedule_front_ajax_actions();
-            $this->_schedule_img_import_ajax_actions();
-            if ( defined( 'NIMBLE_SAVED_SECTIONS_ENABLED' ) && NIMBLE_SAVED_SECTIONS_ENABLED ) {
-                $this->_schedule_section_saving_ajax_actions();
-            }
+
             // FRONT ASSETS
             $this->_schedule_front_assets_printing();
             // CUSTOOMIZER PREVIEW ASSETS
@@ -12761,40 +12901,11 @@ if ( ! class_exists( 'SEK_Front_Ajax' ) ) :
         // Fired in __construct()
         function _schedule_front_ajax_actions() {
             add_action( 'wp_ajax_sek_get_content', array( $this, 'sek_get_level_content_for_injection' ) );
-            //add_action( 'wp_ajax_sek_get_preview_ui_element', array( $this, 'sek_get_ui_content_for_injection' ) );
-            // Fetches the preset_sections
-            add_action( 'wp_ajax_sek_get_preset_sections', array( $this, 'sek_get_preset_sektions' ) );
-            // Fetches the list of revision for a given skope_id
-            add_action( 'wp_ajax_sek_get_revision_history', array( $this, 'sek_get_revision_history' ) );
-            // Fetches the revision for a given post id
-            add_action( 'wp_ajax_sek_get_single_revision', array( $this, 'sek_get_single_revision' ) );
-            // Fetches the category collection to generate the options for a select input
-            // @see api.czrInputMap.category_picker
-            add_action( 'wp_ajax_sek_get_post_categories', array( $this, 'sek_get_post_categories' ) );
-
-            // Fetches the code editor params to generate the options for a textarea input
-            // @see api.czrInputMap.code_editor
-            add_action( 'wp_ajax_sek_get_code_editor_params', array( $this, 'sek_get_code_editor_params' ) );
-
-            add_action( 'wp_ajax_sek_postpone_feedback', array( $this, 'sek_postpone_feedback_notification' ) );
-
-            // <AJAX TO FETCH INPUT COMPONENTS>
-            // this dynamic filter is declared on wp_ajax_ac_get_template in the czr_base_fmk
-            // It allows us to populate the server response with the relevant module html template
-            // $html = apply_filters( "ac_set_ajax_czr_tmpl___{$module_type}", '', $tmpl );
-            add_filter( "ac_set_ajax_czr_tmpl___fa_icon_picker_input", array( $this, 'sek_get_fa_icon_list_tmpl' ), 10, 3 );
-
-            // this dynamic filter is declared on wp_ajax_ac_get_template in the czr_base_fmk
-            // It allows us to populate the server response with the relevant module html template
-            // $html = apply_filters( "ac_set_ajax_czr_tmpl___{$module_type}", '', $tmpl );
-            add_filter( "ac_set_ajax_czr_tmpl___font_picker_input", array( $this, 'sek_get_font_list_tmpl' ), 10, 3 );
-            // </AJAX TO FETCH INPUT COMPONENTS>
 
             // Returns the customize url for the edit button when using Gutenberg editor
             // implemented for https://github.com/presscustomizr/nimble-builder/issues/449
             // @see assets/admin/js/nimble-gutenberg.js
             add_action( 'wp_ajax_sek_get_customize_url_for_nimble_edit_button', array( $this, 'sek_get_customize_url_for_nimble_edit_button' ) );
-
 
             // This is the list of accepted actions
             $this->ajax_action_map = array(
@@ -12853,40 +12964,6 @@ if ( ! class_exists( 'SEK_Front_Ajax' ) ) :
                 wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => bad_method' );
             }
         }//sek_do_ajax_pre_checks()
-
-
-        ////////////////////////////////////////////////////////////////
-        // IMPORT IMG
-        // Fired in __construct()
-        function _schedule_img_import_ajax_actions() {
-            add_action( 'wp_ajax_sek_import_attachment', array( $this, 'sek_ajax_import_attachment' ) );
-        }
-
-        ////////////////////////////////////////////////////////////////
-        // SECTION SAVING
-        // Fired in __construct()
-        function _schedule_section_saving_ajax_actions() {
-            // Writes the saved section in a CPT + update the saved section option
-            add_action( 'wp_ajax_sek_save_section', array( $this, 'sek_ajax_save_section' ) );
-            // Fetches the user_saved sections
-            add_action( 'wp_ajax_sek_get_user_saved_sections', array( $this, 'sek_sek_get_user_saved_sections' ) );
-        }
-
-        ////////////////////////////////////////////////////////////////
-        // PRESET SECTIONS
-        // Fired in __construct()
-        // hook : 'wp_ajax_sek_get_preset_sektions'
-        function sek_get_preset_sektions() {
-            $this->sek_do_ajax_pre_checks();
-            // May 21st => back to the local data
-            // after problem was reported when fetching data remotely : https://github.com/presscustomizr/nimble-builder/issues/445
-            //$preset_sections = sek_get_preset_sections_api_data();
-            $preset_sections = sek_get_preset_section_collection_from_json();
-            if ( empty( $preset_sections ) ) {
-                wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => no preset_sections when running sek_get_preset_sections_api_data()' );
-            }
-            wp_send_json_success( $preset_sections );
-        }
 
 
 
@@ -13185,201 +13262,6 @@ if ( ! class_exists( 'SEK_Front_Ajax' ) ) :
 
 
 
-
-
-
-
-
-
-
-
-        /////////////////////////////////////////////////////////////////
-        // hook : wp_ajax_sek_import_attachment
-        function sek_ajax_import_attachment() {
-            $this->sek_do_ajax_pre_checks( array( 'check_nonce' => false ) );
-
-            if ( !isset( $_POST['img_url'] ) || !is_string($_POST['img_url']) ) {
-                wp_send_json_error( 'missing_or_invalid_img_url_when_importing_image');
-            }
-
-            $id = sek_sideload_img_and_return_attachment_id( $_POST['img_url'] );
-            if ( is_wp_error( $id ) ) {
-                wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => problem when trying to wp_insert_attachment() for img : ' . $_POST['img_url'] . ' | SERVER ERROR => ' . json_encode( $id ) );
-            } else {
-                wp_send_json_success([
-                  'id' => $id,
-                  'url' => wp_get_attachment_url( $id )
-                ]);
-            }
-        }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        /////////////////////////////////////////////////////////////////
-        // hook : wp_ajax_sek_save_section
-        function sek_ajax_save_section() {
-            $this->sek_do_ajax_pre_checks( array( 'check_nonce' => true ) );
-
-            // We must have a title and a section_id and sektion data
-            if ( empty( $_POST['sek_title']) ) {
-                wp_send_json_error( __FUNCTION__ . ' => missing title' );
-            }
-            if ( empty( $_POST['sek_id']) ) {
-                wp_send_json_error( __FUNCTION__ . ' => missing sektion_id' );
-            }
-            if ( empty( $_POST['sek_data']) ) {
-                wp_send_json_error( __FUNCTION__ . ' => missing sektion data' );
-            }
-            if ( ! is_string( $_POST['sek_data'] ) ) {
-                wp_send_json_error( __FUNCTION__ . ' => the sektion data must be a json stringified' );
-            }
-            // sek_error_log('SEKS DATA ?', $_POST['sek_data'] );
-            // sek_error_log('json decode ?', json_decode( wp_unslash( $_POST['sek_data'] ), true ) );
-            $sektion_to_save = array(
-                'title' => $_POST['sek_title'],
-                'description' => $_POST['sek_description'],
-                'id' => $_POST['sek_id'],
-                'type' => 'content',//in the future will be used to differentiate header, content and footer sections
-                'creation_date' => date("Y-m-d H:i:s"),
-                'update_date' => '',
-                'data' => $_POST['sek_data']//<= json stringified
-            );
-
-            $saved_section_post = sek_update_saved_seks_post( $sektion_to_save );
-            if ( is_wp_error( $saved_section_post ) ) {
-                wp_send_json_error( __FUNCTION__ . ' => error when invoking sek_update_saved_seks_post()' );
-            } else {
-                // sek_error_log( 'ALORS CE POST?', $saved_section_post );
-                wp_send_json_success( [ 'section_post_id' => $saved_section_post->ID ] );
-            }
-
-            //sek_error_log( __FUNCTION__ . '$_POST' ,  $_POST);
-        }
-
-
-        // @hook wp_ajax_sek_sek_get_user_saved_sections
-        function sek_sek_get_user_saved_sections() {
-            $this->sek_do_ajax_pre_checks( array( 'check_nonce' => true ) );
-
-            // We must have a section_id provided
-            if ( empty( $_POST['preset_section_id']) || ! is_string( $_POST['preset_section_id'] ) ) {
-                wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => missing or invalid preset_section_id' );
-            }
-            $section_id = $_POST['preset_section_id'];
-
-            $section_data_decoded_from_custom_post_type = sek_get_saved_sektion_data( $section_id );
-            if ( ! empty( $section_data_decoded_from_custom_post_type ) ) {
-                wp_send_json_success( $section_data_decoded_from_custom_post_type );
-            } else {
-                $all_saved_seks = get_option( NIMBLE_OPT_NAME_FOR_SAVED_SEKTIONS );
-                if ( ! is_array( $all_saved_seks ) || empty( $all_saved_seks[$section_id]) ) {
-                    sek_error_log( __CLASS__ . '::' . __FUNCTION__ . ' => missing section data in get_option( NIMBLE_OPT_NAME_FOR_SAVED_SEKTIONS )' );
-                }
-                // $section_infos is an array
-                // Array
-                // (
-                //     [post_id] => 399
-                //     [title] => My section one
-                //     [description] =>
-                //     [creation_date] => 2018-10-29 13:52:54
-                //     [type] => content
-                // )
-                $section_infos = $all_saved_seks[$section_id];
-                wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => missing post data for section title ' . $section_infos['title'] );
-            }
-        }
-
-
-
-
-
-
-        ////////////////////////////////////////////////////////////////
-        // REVISIONS
-        // Fired in __construct()
-        function sek_get_revision_history() {
-            $this->sek_do_ajax_pre_checks( array( 'check_nonce' => true ) );
-
-            if ( ! isset( $_POST['skope_id'] ) || empty( $_POST['skope_id'] ) ) {
-                wp_send_json_error(  __CLASS__ . '::' . __FUNCTION__ . ' => missing skope_id' );
-            }
-            $rev_list = sek_get_revision_history_from_posts( $_POST['skope_id'] );
-            wp_send_json_success( $rev_list );
-        }
-
-
-        function sek_get_single_revision() {
-            $this->sek_do_ajax_pre_checks( array( 'check_nonce' => true ) );
-
-            if ( ! isset( $_POST['revision_post_id'] ) || empty( $_POST['revision_post_id'] ) ) {
-                wp_send_json_error(  __CLASS__ . '::' . __FUNCTION__ . ' => missing revision_post_id' );
-            }
-            $revision = sek_get_single_post_revision( $_POST['revision_post_id'] );
-            wp_send_json_success( $revision );
-        }
-
-
-
-        ////////////////////////////////////////////////////////////////
-        // POST CATEGORIES => to be used in the category picker select input
-        // Fired in __construct()
-        function sek_get_post_categories() {
-            $this->sek_do_ajax_pre_checks( array( 'check_nonce' => true ) );
-            $raw_cats = get_categories();
-            $raw_cats = is_array( $raw_cats ) ? $raw_cats : array();
-            $cat_collection = array();
-            foreach( $raw_cats as $cat ) {
-                $cat_collection[] = array(
-                    'id' => $cat->term_id,
-                    'slug' => $cat->slug,
-                    'name' => sprintf( '%s (%s %s)', $cat->cat_name, $cat->count, __('posts', 'nimble-builder') )
-                );
-            }
-            wp_send_json_success( $cat_collection );
-        }
-
-        ////////////////////////////////////////////////////////////////
-        // CODE EDITOR PARAMS => to be used in the code editor input
-        // Fired in __construct()
-        function sek_get_code_editor_params() {
-            $this->sek_do_ajax_pre_checks( array( 'check_nonce' => true ) );
-            $code_type = isset( $_POST['code_type'] ) ? $_POST['code_type'] : 'text/html';
-            $editor_params = nimble_get_code_editor_settings( array(
-                'type' => $code_type
-            ));
-            wp_send_json_success( $editor_params );
-        }
-
-        ////////////////////////////////////////////////////////////////
-        // POSTPONE FEEDBACK NOTIFICATION IN CUSTOMIZER
-        // INSPIRED FROM CORE DISMISS POINTER MECHANISM
-        // @see wp-admin/includes/ajax-actions.php
-        function sek_postpone_feedback_notification() {
-            $this->sek_do_ajax_pre_checks( array( 'check_nonce' => true ) );
-
-            if ( !isset( $_POST['transient_duration_in_days'] ) ||!is_numeric( $_POST['transient_duration_in_days'] ) ) {
-                $transient_duration = 7 * DAY_IN_SECONDS;
-            } else {
-                $transient_duration = $_POST['transient_duration_in_days'] * DAY_IN_SECONDS;
-            }
-            set_transient( NIMBLE_FEEDBACK_NOTICE_ID, 'maybe_later', $transient_duration );
-            wp_die( 1 );
-        }
-
-
         ////////////////////////////////////////////////////////////////
         // USED TO PRINT THE BUTTON EDIT WITH NIMBLE ON POSTS AND PAGES
         // when using Gutenberg editor
@@ -13399,251 +13281,6 @@ if ( ! class_exists( 'SEK_Front_Ajax' ) ) :
             $customize_url = sek_get_customize_url_for_post_id( $post_id, $return_url_after_customization );
             wp_send_json_success( $customize_url );
         }
-
-
-        ////////////////////////////////////////////////////////////////
-        // FETCH FONT AWESOME ICONS
-        // hook : ac_set_ajax_czr_tmpl___czr_tiny_mce_editor_module
-        // this dynamic filter is declared on wp_ajax_ac_get_template
-        // It allows us to populate the server response with the relevant module html template
-        // $html = apply_filters( "ac_set_ajax_czr_tmpl___{$module_type}", '', $tmpl );
-        //
-        // For czr_tiny_mce_editor_module, we request the font_list tmpl
-        function sek_get_fa_icon_list_tmpl( $html, $requested_tmpl = '', $posted_params = array() ) {
-            if ( empty( $requested_tmpl ) ) {
-                wp_send_json_error( __FUNCTION__ . ' => the requested tmpl is empty' );
-            }
-            return wp_json_encode(
-                $this->sek_retrieve_decoded_font_awesome_icons()
-            );//will be sent by wp_send_json_success() in ::ac_set_ajax_czr_tmpl()
-        }
-
-
-
-        //retrieves faicons:
-        // 1) from faicons.json if needed (transient doesn't exists, or is new version => set in TC_wfc ) and decodes them
-        // otherwise
-        // 2) from the transient set if it exists
-        function sek_retrieve_decoded_font_awesome_icons() {
-            // this file must be generated with: https://github.com/presscustomizr/nimble-builder/issues/57
-            $faicons_json_path      = NIMBLE_BASE_PATH . '/assets/faicons.json';
-            $faicons_transient_name = 'sek_font_awesome_february_2020';
-            if ( false == get_transient( $faicons_transient_name ) ) {
-                if ( file_exists( $faicons_json_path ) ) {
-                    $faicons_raw      = @file_get_contents( $faicons_json_path );
-
-                    if ( false === $faicons_raw ) {
-                        $faicons_raw = wp_remote_fopen( $faicons_json_path );
-                    }
-
-                    $faicons_decoded   = json_decode( $faicons_raw, true );
-                    set_transient( $faicons_transient_name , $faicons_decoded , 60*60*24*3000 );
-                } else {
-                    wp_send_json_error( __FUNCTION__ . ' => the file faicons.json is missing' );
-                }
-            }
-            else {
-                $faicons_decoded = get_transient( $faicons_transient_name );
-            }
-
-            return $faicons_decoded;
-        }
-
-
-
-
-
-
-
-
-        ////////////////////////////////////////////////////////////////
-        // FETCH FONT LISTS
-        // hook : ac_set_ajax_czr_tmpl___czr_tiny_mce_editor_module
-        // For czr_tiny_mce_editor_module, we request the font_list tmpl
-        function sek_get_font_list_tmpl( $html, $requested_tmpl = '', $posted_params = array() ) {
-            if ( empty( $requested_tmpl ) ) {
-                wp_send_json_error( __FUNCTION__ . ' => the requested tmpl is empty' );
-            }
-
-            return wp_json_encode( array(
-                'cfonts' => $this->sek_get_cfonts(),
-                'gfonts' => $this->sek_get_gfonts(),
-            ) );//will be sent by wp_send_json_success() in ::ac_set_ajax_czr_tmpl()
-        }
-
-
-        function sek_get_cfonts() {
-            $cfonts = array();
-            $raw_cfonts = array(
-                'Arial Black,Arial Black,Gadget,sans-serif',
-                'Century Gothic',
-                'Comic Sans MS,Comic Sans MS,cursive',
-                'Courier New,Courier New,Courier,monospace',
-                'Georgia,Georgia,serif',
-                'Helvetica Neue, Helvetica, Arial, sans-serif',
-                'Impact,Charcoal,sans-serif',
-                'Lucida Console,Monaco,monospace',
-                'Lucida Sans Unicode,Lucida Grande,sans-serif',
-                'Palatino Linotype,Book Antiqua,Palatino,serif',
-                'Tahoma,Geneva,sans-serif',
-                'Times New Roman,Times,serif',
-                'Trebuchet MS,Helvetica,sans-serif',
-                'Verdana,Geneva,sans-serif',
-            );
-            foreach ( $raw_cfonts as $font ) {
-              //no subsets for cfonts => epty array()
-              $cfonts[] = array(
-                  'name'    => $font ,
-                  'subsets'   => array()
-              );
-            }
-            return apply_filters( 'sek_font_picker_cfonts', $cfonts );
-        }
-
-
-        //retrieves gfonts:
-        // 1) from webfonts.json if needed (transient doesn't exists, or is new version => set in TC_wfc ) and decodes them
-        // otherwise
-        // 2) from the transiet set if it exists
-        //
-        // => Until June 2017, the webfonts have been stored in 'tc_gfonts' transient
-        // => In June 2017, the Google Fonts have been updated with a new webfonts.json
-        // generated from : https://www.googleapis.com/webfonts/v1/webfonts?key=AIzaSyBID8gp8nBOpWyH5MrsF7doP4fczXGaHdA
-        //
-        // => The transient name is now : czr_gfonts_june_2017
-        function sek_retrieve_decoded_gfonts() {
-            if ( false == get_transient( 'sek_gfonts_march_2020' ) ) {
-                $gfont_raw      = @file_get_contents( NIMBLE_BASE_PATH ."/assets/webfonts.json" );
-
-                if ( $gfont_raw === false ) {
-                  $gfont_raw = wp_remote_fopen( NIMBLE_BASE_PATH ."/assets/webfonts.json" );
-                }
-
-                $gfonts_decoded   = json_decode( $gfont_raw, true );
-                set_transient( 'sek_gfonts_march_2020' , $gfonts_decoded , 60*60*24*3000 );
-            }
-            else {
-              $gfonts_decoded = get_transient( 'sek_gfonts_march_2020' );
-            }
-
-            return $gfonts_decoded;
-        }
-
-
-
-        //@return the google fonts
-        function sek_get_gfonts( $what = null ) {
-          //checks if transient exists or has expired
-
-          $gfonts_decoded = $this->sek_retrieve_decoded_gfonts();
-          $gfonts = array();
-          //$subsets = array();
-
-          // $subsets['all-subsets'] = sprintf( '%1$s ( %2$s %3$s )',
-          //   __( 'All languages' , 'text_doma' ),
-          //   count($gfonts_decoded['items']) + count( $this->get_cfonts() ),
-          //   __('fonts' , 'text_doma' )
-          // );
-
-          foreach ( $gfonts_decoded['items'] as $font ) {
-            foreach ( $font['variants'] as $variant ) {
-              $name     = str_replace( ' ', '+', $font['family'] );
-              $gfonts[]   = array(
-                  'name'    => $name . ':' .$variant
-                  //'subsets'   => $font['subsets']
-              );
-            }
-            //generates subset list : subset => font number
-            // foreach ( $font['subsets'] as $sub ) {
-            //   $subsets[$sub] = isset($subsets[$sub]) ? $subsets[$sub]+1 : 1;
-            // }
-          }
-
-          //finalizes the subset array
-          // foreach ( $subsets as $subset => $font_number ) {
-          //   if ( 'all-subsets' == $subset )
-          //     continue;
-          //   $subsets[$subset] = sprintf('%1$s ( %2$s %3$s )',
-          //     $subset,
-          //     $font_number,
-          //     __('fonts' , 'text_doma' )
-          //   );
-          // }
-
-          return ('subsets' == $what) ? apply_filters( 'sek_font_picker_gfonts_subsets ', $subsets ) : apply_filters( 'sek_font_picker_gfonts', $gfonts )  ;
-        }
-
-
-
-
-
-
-
-
-
-
-
-        // hook : 'wp_ajax_sek_get_preview_ui_element'
-        /*function sek_get_ui_content_for_injection( $params ) {
-            // error_log( print_r( $_POST, true ) );
-            // error_log( print_r( sek_get_skoped_seks( "skp__post_page_home", 'loop_start' ), true ) );
-            if ( ! is_user_logged_in() ) {
-                wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => unauthenticated' );
-                return;
-            }
-            if ( ! current_user_can( 'edit_theme_options' ) ) {
-                wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => user_cant_edit_theme_options');
-                return;
-            }
-            if ( ! current_user_can( 'customize' ) ) {
-                status_header( 403 );
-                wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => customize_not_allowed' );
-                return;
-            } else if ( ! isset( $_SERVER['REQUEST_METHOD'] ) || 'POST' !== $_SERVER['REQUEST_METHOD'] ) {
-                status_header( 405 );
-                wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => bad_method' );
-                return;
-            }
-
-            if ( ! isset( $_POST['level'] ) || empty( $_POST['level'] ) ) {
-                wp_send_json_error(  __CLASS__ . '::' . __FUNCTION__ . ' => missing level' );
-                return;
-            }
-            if ( ! isset( $_POST['id'] ) || empty( $_POST['id'] ) ) {
-                wp_send_json_error(  __CLASS__ . '::' . __FUNCTION__ . ' => missing level id' );
-                return;
-            }
-            if ( ! isset( $_POST['location_skope_id'] ) || empty( $_POST['location_skope_id'] ) ) {
-                wp_send_json_error(  __CLASS__ . '::' . __FUNCTION__ . ' => missing skope_id' );
-                return;
-            }
-
-
-            // the $_POST['customized'] has already been updated
-            // so invoking sek_get_skoped_seks() will ensure that we get the latest data
-            // since wp has not been fired yet, we need to use the posted skope_id param.
-            $sektionSettingValue = sek_get_skoped_seks( $_POST['location_skope_id'] );
-            if ( ! is_array( $sektionSettingValue ) || ! array_key_exists( 'collection', $sektionSettingValue ) || ! is_array( $sektionSettingValue['collection'] ) ) {
-                wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => invalid sektionSettingValue' );
-                return;
-            }
-            // we need to set the parent_mode here to access it later in the ::render method to calculate the column width.
-            $this->parent_model = sek_get_parent_level_model( $_POST[ 'id' ], $sektionSettingValue['collection'] );
-            $this->model = sek_get_level_model( $_POST[ 'id' ], $sektionSettingValue['collection'] );
-
-            $level = $_POST['level'];
-
-            $html = '';
-            ob_start();
-                load_template( dirname( __FILE__ ) . "/tmpl/ui/block-overlay-{$level}.php", false );
-            $html = ob_get_clean();
-
-            if ( empty( $html ) ) {
-                wp_send_json_error( __CLASS__ . '::' . __FUNCTION__ . ' => no content returned' );
-            } else {
-                wp_send_json_success( apply_filters( 'sek_ui_content_results', $html ) );
-            }
-        }//sek_get_content_for_injection()*/
 
     }//class
 endif;
@@ -14099,7 +13736,7 @@ if ( !class_exists( 'SEK_Front_Assets' ) ) :
             if ( !sek_local_skope_has_nimble_sections( skp_get_skope_id() ) && !sek_has_global_sections() )
               return;
             ?>
-            <script id="nimble-app-init">window.nb_={},function(e,n){if(window.nb_={isArray:function(e){return Array.isArray(e)||"[object Array]"===toString.call(e)},inArray:function(e,n){return!(!nb_.isArray(e)||nb_.isUndefined(n))&&e.indexOf(n)>-1},isUndefined:function(e){return void 0===e},isObject:function(e){var n=typeof e;return"function"===n||"object"===n&&!!e},errorLog:function(){nb_.isUndefined(console)||"function"!=typeof window.console.log||console.log.apply(console,arguments)},hasPreloadSupport:function(e){var n=document.createElement("link").relList;return!(!n||!n.supports)&&n.supports("preload")},listenTo:function(e,n){var t={"nb-jquery-loaded":function(){return"undefined"!=typeof jQuery},"nb-app-ready":function(){return void 0!==window.nb_&&nb_.wasListenedTo("nb-jquery-loaded")},"nb-jmp-parsed":function(){return"undefined"!=typeof jQuery&&void 0!==jQuery.fn.magnificPopup},"nb-main-swiper-parsed":function(){return void 0!==window.Swiper}},o=function(o){nb_.isUndefined(t[e])||!1!==t[e]()?(n(),nb_.eventsListenedTo.push(e)):nb_.errorLog("Nimble error => an event callback could not be fired because conditions not met => ",e,nb_.eventsListenedTo)};"function"==typeof n?nb_.wasEmitted(e)?o():document.addEventListener(e,o):nb_.errorLog("Nimble error => listenTo func param is not a function for event => ",e)},eventsEmitted:[],eventsListenedTo:[],emit:function(e,n){if(!(nb_.isUndefined(n)||n.fire_once)||!nb_.wasEmitted(e)){var t=document.createEvent("Event");t.initEvent(e,!0,!0),document.dispatchEvent(t),nb_.eventsEmitted.push(e)}},wasListenedTo:function(e){return"string"==typeof e&&nb_.inArray(nb_.eventsListenedTo,e)},wasEmitted:function(e){return"string"==typeof e&&nb_.inArray(nb_.eventsEmitted,e)},isInScreen:function(e,n){var t=window.pageYOffset||document.documentElement.scrollTop,o=t+window.innerHeight,i=e.offsetTop,r=n||0;return i+e.clientHeight>=t-r&&i<=o+r},isCustomizing:function(){return!1},isLazyLoadEnabled:function(){return!nb_.isCustomizing()&&!1},preloadAsset:function(e){if(e=e||{},nb_.preloadedAssets=nb_.preloadedAssets||[],!nb_.inArray(nb_.preloadedAssets,e.id)){var n=document.getElementsByTagName("head")[0],t=document.createElement("link"),o=(e.as,function(){if("style"===e.as)this.setAttribute("rel","stylesheet");else{var t=document.createElement("script");t.setAttribute("src",e.href),t.setAttribute("id",e.id),nb_.hasPreloadSupport()||"script"!==e.as||t.setAttribute("defer","defer"),n.appendChild(t),this&&this.parentNode&&this.parentNode.removeChild(this)}});nb_.hasPreloadSupport()||"script"!==e.as?(t.setAttribute("href",e.href),t.setAttribute("rel",nb_.hasPreloadSupport()?"preload":"stylesheet"),t.setAttribute("id",e.id),t.setAttribute("as",e.as),t.onload=function(){this.onload=null,e.onEvent?nb_.listenTo(e.onEvent,function(){o.call(t)}):o.call(t)},t.onerror=function(){nb_.errorLog("Nimble preloadAsset error",er,e)}):e.onEvent?nb_.listenTo(e.onEvent,function(){o.call(t)}):o.call(t),n.appendChild(t),nb_.preloadedAssets.push(e.id),e.scriptEl&&e.scriptEl.parentNode&&e.scriptEl.parentNode.removeChild(e.scriptEl)}},revealBG:function(){this.getAttribute("data-sek-src")&&(this.setAttribute("style",'background-image:url("'+this.getAttribute("data-sek-src")+'")'),this.className+=" smartload-skip",this.querySelectorAll(".sek-css-loader").forEach(function(e){nb_.isObject(e)&&e.parentNode.removeChild(e)}))}},window.NodeList&&!NodeList.prototype.forEach&&(NodeList.prototype.forEach=function(e,n){n=n||window;for(var t=0;t<this.length;t++)e.call(n,this[t],t,this)}),nb_.listenTo("nb-docready",function(){var e=document.querySelectorAll("div.sek-has-bg");!nb_.isObject(e)||e.length<1||e.forEach(function(e){nb_.isObject(e)&&(!nb_.isLazyLoadEnabled()||nb_.isInScreen(e)&&nb_.isLazyLoadEnabled())&&nb_.revealBG.call(e)})}),"complete"===document.readyState||"loading"!==document.readyState&&!document.documentElement.doScroll)nb_.emit("nb-docready");else{var t=function(){nb_.wasEmitted("nb-docready")||nb_.emit("nb-docready")};document.addEventListener("DOMContentLoaded",t),window.addEventListener("load",t)}}(window,document);</script>
+            <script id="nimble-app-init">window.nb_={},function(){if(window.nb_={isArray:function(e){return Array.isArray(e)||"[object Array]"===toString.call(e)},inArray:function(e,n){return!(!nb_.isArray(e)||nb_.isUndefined(n))&&-1<e.indexOf(n)},isUndefined:function(e){return void 0===e},isObject:function(e){var n=typeof e;return"function"==n||"object"==n&&!!e},errorLog:function(){nb_.isUndefined(console)||"function"!=typeof window.console.log||console.log.apply(console,arguments)},hasPreloadSupport:function(e){var n=document.createElement("link").relList;return!(!n||!n.supports)&&n.supports("preload")},listenTo:function(n,t){function e(e){nb_.isUndefined(o[n])||!1!==o[n]()?(t(),nb_.eventsListenedTo.push(n)):nb_.errorLog("Nimble error => an event callback could not be fired because conditions not met => ",n,nb_.eventsListenedTo)}var o={"nb-jquery-loaded":function(){return"undefined"!=typeof jQuery},"nb-app-ready":function(){return void 0!==window.nb_&&nb_.wasListenedTo("nb-jquery-loaded")},"nb-jmp-parsed":function(){return"undefined"!=typeof jQuery&&void 0!==jQuery.fn.magnificPopup},"nb-main-swiper-parsed":function(){return void 0!==window.Swiper}};"function"==typeof t?nb_.wasEmitted(n)?e():document.addEventListener(n,e):nb_.errorLog("Nimble error => listenTo func param is not a function for event => ",n)},eventsEmitted:[],eventsListenedTo:[],emit:function(e,n){if(!(nb_.isUndefined(n)||n.fire_once)||!nb_.wasEmitted(e)){var t=document.createEvent("Event");t.initEvent(e,!0,!0),document.dispatchEvent(t),nb_.eventsEmitted.push(e)}},wasListenedTo:function(e){return"string"==typeof e&&nb_.inArray(nb_.eventsListenedTo,e)},wasEmitted:function(e){return"string"==typeof e&&nb_.inArray(nb_.eventsEmitted,e)},isInScreen:function(e,n){var t=window.pageYOffset||document.documentElement.scrollTop,o=t+window.innerHeight,r=e.offsetTop,i=n||0;return t-i<=r+e.clientHeight&&r<=o+i},isCustomizing:function(){return!1},isLazyLoadEnabled:function(){return!nb_.isCustomizing()&&!1},preloadAsset:function(t){if(t=t||{},nb_.preloadedAssets=nb_.preloadedAssets||[],!nb_.inArray(nb_.preloadedAssets,t.id)){function e(){var e=this;if("style"===t.as)e.setAttribute("rel","stylesheet");else{var n=document.createElement("script");n.setAttribute("src",t.href),n.setAttribute("id",t.id),nb_.hasPreloadSupport()||"script"!==t.as||n.setAttribute("defer","defer"),o.appendChild(n),e&&e.parentNode&&e.parentNode.removeChild(e)}}var o=document.getElementsByTagName("head")[0],n=document.createElement("link");t.as;nb_.hasPreloadSupport()||"script"!==t.as?(n.setAttribute("href",t.href),n.setAttribute("rel",nb_.hasPreloadSupport()?"preload":"stylesheet"),n.setAttribute("id",t.id),n.setAttribute("as",t.as),n.onload=function(){this.onload=null,t.onEvent?nb_.listenTo(t.onEvent,function(){e.call(n)}):e.call(n)},n.onerror=function(e){nb_.errorLog("Nimble preloadAsset error",e,t)}):t.onEvent?nb_.listenTo(t.onEvent,function(){e.call(n)}):e.call(n),o.appendChild(n),nb_.preloadedAssets.push(t.id),t.scriptEl&&t.scriptEl.parentNode&&t.scriptEl.parentNode.removeChild(t.scriptEl)}},mayBeRevealBG:function(){this.getAttribute("data-sek-src")&&(this.setAttribute("style",'background-image:url("'+this.getAttribute("data-sek-src")+'")'),this.className+=" sek-lazy-loaded",this.querySelectorAll(".sek-css-loader").forEach(function(e){nb_.isObject(e)&&e.parentNode.removeChild(e)}))}},window.NodeList&&!NodeList.prototype.forEach&&(NodeList.prototype.forEach=function(e,n){n=n||window;for(var t=0;t<this.length;t++)e.call(n,this[t],t,this)}),nb_.listenTo("nb-docready",function(){var e=document.querySelectorAll("div.sek-has-bg");!nb_.isObject(e)||e.length<1||e.forEach(function(e){nb_.isObject(e)&&nb_.isInScreen(e)&&nb_.mayBeRevealBG.call(e)})}),"complete"===document.readyState||"loading"!==document.readyState&&!document.documentElement.doScroll)nb_.emit("nb-docready");else{function e(){nb_.wasEmitted("nb-docready")||nb_.emit("nb-docready")}document.addEventListener("DOMContentLoaded",e),window.addEventListener("load",e)}}((window,document));</script>
             <?php
         }
 
@@ -14275,8 +13912,22 @@ if ( !class_exists( 'SEK_Front_Assets' ) ) :
             add_action( 'wp_footer', array( $this, 'sek_customizr_js_stuff' ), PHP_INT_MAX  );
 
             // Load customize preview js
-            add_action( 'customize_preview_init' , array( $this, 'sek_schedule_customize_preview_assets' ) );
+            add_action( 'customize_preview_init', array( $this, 'sek_schedule_customize_preview_assets' ) );
+
+            // add customizer-preview class when customizing
+            add_filter( 'body_class', array( $this, 'sek_add_body_class' ) );
         }//_schedule_preview_assets_printing
+
+        // @'body_class'
+        function sek_add_body_class( $classes ) {
+            $classes = is_array($classes) ? $classes : array();
+            // Check whether we're in the customizer preview.
+            if ( is_customize_preview() ) {
+              $classes[] = 'customizer-preview';
+            }
+            return $classes;
+        }
+
 
         // @'wp_footer'
         function sek_customizr_js_stuff() {
@@ -14311,8 +13962,9 @@ if ( !class_exists( 'SEK_Front_Assets' ) ) :
                         if ( !nb_.isObject(el) )
                           return;
 
+                        // Maybe reveal BG if lazyload is on
                         if ( nb_.isCustomizing() ) {
-                            nb_.revealBG.call(el);
+                            nb_.mayBeRevealBG.call(el);
                         }
                     });
               });
@@ -14792,7 +14444,8 @@ if ( ! class_exists( 'SEK_Front_Render' ) ) :
         }
 
         // the $location_data can be provided. Typically when using the function render_content_sections_for_nimble_template in the Nimble page template.
-        public function _render_seks_for_location( $location_id = '', $location_data = array() ) {
+        // @param $skope_id added april 2020 for https://github.com/presscustomizr/nimble-builder/issues/657
+        public function _render_seks_for_location( $location_id = '', $location_data = array(), $skope_id = '' ) {
             $all_locations = sek_get_locations();
 
             if ( ! array_key_exists( $location_id, $all_locations ) ) {
@@ -14802,7 +14455,10 @@ if ( ! class_exists( 'SEK_Front_Render' ) ) :
             $locationSettingValue = array();
             $is_global_location = sek_is_global_location( $location_id );
             if ( empty( $location_data ) ) {
-                $skope_id = $is_global_location ? NIMBLE_GLOBAL_SKOPE_ID : skp_build_skope_id();
+                // APRIL 2020 added for for https://github.com/presscustomizr/nimble-builder/issues/657
+                if ( empty($skope_id) ) {
+                    $skope_id = $is_global_location ? NIMBLE_GLOBAL_SKOPE_ID : skp_build_skope_id();
+                }
                 $locationSettingValue = sek_get_skoped_seks( $skope_id, $location_id );
             } else {
                 $locationSettingValue = $location_data;
@@ -14981,25 +14637,33 @@ if ( ! class_exists( 'SEK_Front_Render' ) ) :
                  LOCATIONS
                 ********************************************************/
                 case 'location' :
+                    $is_header_location = true === sek_get_registered_location_property( $id, 'is_header_location' );
+                    $is_footer_location = true === sek_get_registered_location_property( $id, 'is_footer_location' );
+                    $is_content_pwd_protected = !skp_is_customizing() && !$is_header_location && !$is_footer_location && post_password_required();
                     //sek_error_log( __FUNCTION__ . ' WHAT ARE WE RENDERING? ' . $id , $collection );
                     //empty sektions wrapper are only printed when customizing
                     ?>
                       <?php if ( skp_is_customizing() || ( ! skp_is_customizing() && ! empty( $collection ) ) ) : ?>
                             <?php
                               Nimble_Manager()->page_has_nimble_content = true;
-                              $is_header_location = true === sek_get_registered_location_property( $id, 'is_header_location' );
-                              $is_footer_location = true === sek_get_registered_location_property( $id, 'is_footer_location' );
-                              printf( '<div class="sektion-wrapper" data-sek-level="location" data-sek-id="%1$s" %2$s %3$s %4$s %5$s>',
+                              printf( '<div class="sektion-wrapper %6$s" data-sek-level="location" data-sek-id="%1$s" %2$s %3$s %4$s %5$s>',
                                   $id,
                                   sprintf('data-sek-is-global-location="%1$s"', sek_is_global_location( $id ) ? 'true' : 'false'),
                                   $is_header_location ? 'data-sek-is-header-location="true"' : '',
                                   $is_footer_location ? 'data-sek-is-footer-location="true"' : '',
-                                  $this->sek_maybe_print_preview_level_guid_html()//<= added for #494
+                                  $this->sek_maybe_print_preview_level_guid_html(),//<= added for #494
+                                  $is_content_pwd_protected ? 'sek-password-protected' : ''//<= added for #673
                               );
                             ?>
                             <?php
-                              $this->parent_model = $model;
-                              foreach ( $collection as $_key => $sec_model ) { $this->render( $sec_model ); }
+                              // If the page/post is password protect, stop the recursive walker here and print the password form
+                              // for https://github.com/presscustomizr/nimble-builder/issues/673
+                              if ( $is_content_pwd_protected ) {
+                                  echo get_the_password_form();
+                              } else {
+                                  $this->parent_model = $model;
+                                  foreach ( $collection as $_key => $sec_model ) { $this->render( $sec_model ); }
+                              }
                             ?>
                             <?php
                               // empty global locations placeholders are only printed when customizing But not previewing a changeset post
@@ -15265,7 +14929,7 @@ if ( ! class_exists( 'SEK_Front_Render' ) ) :
                       ?><script>nb_.emit('nb-needs-parallax');</script><?php
                     }
 
-                    printf('<div data-sek-level="module" data-sek-id="%1$s" data-sek-module-type="%2$s" class="sek-module %3$s %4$s" %5$s %6$s %7$s %8$s %9$s %10$s>%11$s',
+                    printf('<div data-sek-level="module" data-sek-id="%1$s" data-sek-module-type="%2$s" class="sek-module %3$s %4$s %5$s" %6$s %7$s %8$s %9$s %10$s>%11$s',
                         $id,
                         $module_type,
                         $this->get_level_visibility_css_class( $model ),
@@ -15511,16 +15175,30 @@ if ( ! class_exists( 'SEK_Front_Render' ) ) :
 
             if ( !empty( $model[ 'options' ] ) && is_array( $model['options'] ) ) {
                 $bg_options = ( ! empty( $model[ 'options' ][ 'bg' ] ) && is_array( $model[ 'options' ][ 'bg' ] ) ) ? $model[ 'options' ][ 'bg' ] : array();
-                if ( !empty( $bg_options[ 'bg-image'] ) && is_numeric( $bg_options[ 'bg-image'] ) ) {
+                if ( !empty( $bg_options[ 'bg-image'] ) ) {
+                    $bg_image_id_or_url = $bg_options[ 'bg-image'];
+                    // April 2020 :
+                    // on import, user can decide to use the image url instead of importing
+                    // we need to check if the image is set as an attachement id or starts with 'http'
+                    // introduced for https://github.com/presscustomizr/nimble-builder/issues/663
                     $new_attributes[] = 'data-sek-has-bg="true"';
-                    $bg_img_url = wp_get_attachment_url( $bg_options[ 'bg-image'] );
-                    // When the fixed background is ckecked, it wins against parallax
-                    $fixed_bg_enabled = !empty( $bg_options['bg-attachment'] ) && sek_booleanize_checkbox_val( $bg_options['bg-attachment'] );
-                    $parallax_enabled = !$fixed_bg_enabled && !empty( $bg_options['bg-parallax'] ) && sek_booleanize_checkbox_val( $bg_options['bg-parallax'] );
-                    if ( $parallax_enabled ) {
-                        $image = wp_get_attachment_image_src( $bg_options[ 'bg-image'], 'full' );
-                        if ( $image ) {
-                            list( $src, $width, $height ) = $image;
+                    if ( is_numeric( $bg_image_id_or_url ) ) {
+                        $bg_img_url = wp_get_attachment_url( $bg_image_id_or_url );
+                    } else if ( "http" === substr( $bg_image_id_or_url, 0, 4 ) ) {
+                        $bg_img_url = $bg_image_id_or_url;
+                    }
+
+                    // At this point we may not have a valid $bg_img_url
+                    // let's check
+                    if ( !empty( $bg_img_url ) ) {
+                        // When the fixed background is ckecked, it wins against parallax
+                        $fixed_bg_enabled = !empty( $bg_options['bg-attachment'] ) && sek_booleanize_checkbox_val( $bg_options['bg-attachment'] );
+                        $parallax_enabled = !$fixed_bg_enabled && !empty( $bg_options['bg-parallax'] ) && sek_booleanize_checkbox_val( $bg_options['bg-parallax'] );
+                        if ( $parallax_enabled && is_numeric( $bg_image_id_or_url ) ) {
+                            $image = wp_get_attachment_image_src( $bg_image_id_or_url, 'full' );
+                            if ( $image ) {
+                                list( $src, $width, $height ) = $image;
+                            }
                         }
                     }
                 }
@@ -15830,6 +15508,7 @@ if ( ! class_exists( 'SEK_Front_Render' ) ) :
         //
         // May 2019 => note that this implementation won't include Nimble sections created in other contexts than page or post.
         // This could be added in the future.
+        // April 2020 : the found_posts number is not correct when search results are paginated. see https://github.com/presscustomizr/nimble-builder/issues/666
         //
         // partially inspired by https://stackoverflow.com/questions/24195818/add-results-into-wordpress-search-results
         function sek_maybe_include_nimble_content_in_search_results(){
@@ -15844,7 +15523,7 @@ if ( ! class_exists( 'SEK_Front_Render' ) ) :
             // Search query on Nimble CPT
             $sek_post_query_vars = array(
                 'post_type'              => NIMBLE_CPT,
-                'post_status'            => get_post_stati(),
+                'post_status'            => 'publish',//get_post_stati(),
                 'posts_per_page'         => -1,
                 'no_found_rows'          => true,
                 'cache_results'          => true,
@@ -15854,43 +15533,59 @@ if ( ! class_exists( 'SEK_Front_Render' ) ) :
                 's' => $query_vars['s']
             );
             $query = new \WP_Query( $sek_post_query_vars );
-
+            $nimble_post_candidates = array();
             // The search string has been found in a set of Nimble posts
             if ( is_array( $query->posts ) ) {
                 foreach ( $query->posts as $post_object ) {
                     // The related WP object ( == skope ) is written in the title of Nimble CPT
-                    // ex : nimble___skp__post_post_114
+                    // ex : nimble___skp__post_post_114, where 114 is the post_id
                     if ( preg_match('(post_page|post_post)', $post_object->post_title ) ) {
-                        $post_number = preg_replace('/[^0-9]/', '', $post_object->post_title );
-                        $post_number = intval($post_number);
-
-                        $post_candidate = get_post( $post_number );
-
+                        $_post_id = preg_replace('/[^0-9]/', '', $post_object->post_title );
+                        $_post_id = intval($_post_id);
+                        $post_candidate = get_post( $_post_id );
                         if ( is_object( $post_candidate ) ) {
-                            // Merge Nimble posts to WP posts
-                            array_push( $wp_query->posts, $post_candidate );
+                            array_push($nimble_post_candidates, $post_candidate);
                         }
                     }
                 }
             }
 
-            // Maybe clean duplicated posts
-            $maybe_includes_duplicated = $wp_query->posts;
-            $without_duplicated = array();
-            $post_ids = array();
+            // april 2020 : found post for https://github.com/presscustomizr/nimble-builder/issues/666
+            $nimble_found_posts = (int)count($nimble_post_candidates);
 
-            foreach ( $maybe_includes_duplicated as $post_obj ) {
-                if ( in_array( $post_obj->ID, $post_ids ) )
-                  continue;
-                $post_ids[] = $post_obj->ID;
-                $without_duplicated[] = $post_obj;
+            // Merge Nimble posts to WP posts but only on the first result page
+            // => this means that the first paginated result page may be > to the user post_per_page setting
+            // fixes https://github.com/presscustomizr/nimble-builder/issues/666
+            if ( !is_paged() ) {
+                // important : when search results are paginated, $wp_query->posts includes the posts of the result page only, not ALL the search results posts.
+                // => this means that $wp_query->posts is not equal to $wp_query->found_posts when results are paginated.
+                $wp_query->posts = is_array($wp_query->posts) ? $wp_query->posts : array();
+
+                // $wp_query->post_count : make sure we remove posts found both by initial query and Nimble search query
+                // => this way we avoid pagination problems by setting a correct value for $wp_query->post_count
+                $maybe_includes_duplicated = array_merge( $wp_query->posts, $nimble_post_candidates );
+                $without_duplicated = array();
+                $post_ids = array();
+                foreach ( $maybe_includes_duplicated as $post_obj ) {
+                    if ( in_array( $post_obj->ID, $post_ids ) )
+                      continue;
+                    $post_ids[] = $post_obj->ID;
+                    $without_duplicated[] = $post_obj;
+                }
+                $wp_query->posts = $without_duplicated;
+                $wp_query->post_count = (int)count($without_duplicated);
             }
-            $wp_query->posts = $without_duplicated;
 
-            // Make sure the post_count and found_posts are updated
-            $wp_query->post_count = count($wp_query->posts);
-            $wp_query->found_posts = $wp_query->post_count;
+            // Found post may include duplicated posts because the search result has been found both in the WP search query and in Nimble one.
+            // This should be improved in the future.
+            // The problem to solve here is that when a search query is paginated, $wp_query->posts only includes the posts of the current page, not all the posts of the search results.
+            // If we had the entire set of WP results, we could create an array merging WP results with Nimble results, remove the duplicates and then calculate a real found_posts value. A possible solution would be to get the wp_query->request, remove the limit per page, and re-run a new query to get the entire set of search results.
+            if ( is_numeric($nimble_found_posts) ) {
+                $wp_query->found_posts = $wp_query->found_posts + $nimble_found_posts;
+            }
         }// sek_maybe_include_nimble_content_in_search_results
+
+
 
 
         // @return html string
@@ -16123,7 +15818,7 @@ class Sek_Simple_Form extends SEK_Front_Render_Css {
         //Hooks
         add_action( 'parse_request', array( $this, 'simple_form_parse_request' ), 20 );
         add_action( 'wp_enqueue_scripts', array( $this, 'maybe_enqueue_recaptcha_scripts' ), 0 );
-        add_action( 'body_class', array( $this, 'set_the_recaptcha_badge_visibility_class') );
+        add_filter( 'body_class', array( $this, 'set_the_recaptcha_badge_visibility_class') );
 
         // Note : form input need to be prefixed to avoid a collision with reserved WordPress input
         // @see : https://stackoverflow.com/questions/15685020/wordpress-form-submission-and-the-404-error-page#16636051
