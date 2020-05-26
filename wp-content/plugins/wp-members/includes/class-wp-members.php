@@ -419,7 +419,7 @@ class WP_Members {
 		add_action( 'login_enqueue_scripts', array( $this, 'enqueue_style_wp_login' ) ); // styles the native registration
 		add_action( 'wp_enqueue_scripts',    array( $this, 'enqueue_style' ) );  // Enqueues the stylesheet.
 		add_action( 'wp_enqueue_scripts',    array( $this, 'loginout_script' ) );
-		add_action( 'pre_get_posts',         array( $this, 'do_hide_posts' ) );
+		add_action( 'pre_get_posts',         array( $this, 'do_hide_posts' ), 20 );
 		add_action( 'customize_register',    array( $this, 'customizer_settings' ) );
 		add_action( 'admin_menu',            'wpmem_admin_options' ); // adds admin menu
 		
@@ -428,8 +428,16 @@ class WP_Members {
 			add_action( 'wpmem_pwd_change',  array( $this->user, 'set_as_logged_in' ), 10 );
 		}
 		
-		add_filter( 'register_form',             'wpmem_wp_register_form' ); // adds fields to the default wp registration
-		add_action( 'woocommerce_register_form', 'wpmem_woo_register_form' );
+		add_filter( 'register_form',               'wpmem_wp_register_form' ); // adds fields to the default wp registration
+		add_action( 'woocommerce_register_form',   'wpmem_woo_register_form' );
+		
+		add_action( 'woocommerce_checkout_update_order_meta', 'wpmem_woo_checkout_update_meta' );
+		add_action( 'woocommerce_form_field_multicheckbox',   'wpmem_form_field_wc_custom_field_types', 10, 4 );
+		add_action( 'woocommerce_form_field_multiselect',     'wpmem_form_field_wc_custom_field_types', 10, 4 );
+		add_action( 'woocommerce_form_field_radio',           'wpmem_form_field_wc_custom_field_types', 10, 4 );
+		if ( ! is_user_logged_in() ) {
+			add_filter( 'woocommerce_checkout_fields', 'wpmem_woo_checkout_form' );
+		}
 		
 		// Add filters.
 		add_filter( 'the_content',             array( $this, 'do_securify' ), 99 );
@@ -1144,7 +1152,14 @@ class WP_Members {
 				}
 			}
 		}
-		return $hidden;
+		/**
+		 * Filter the hidden posts array.
+		 *
+		 * @since 3.3.4
+		 *
+		 * @param array $hidden
+		 */
+		return apply_filters( 'wpmem_hidden_posts', $hidden );
 	}
 
 	/**
@@ -1158,7 +1173,17 @@ class WP_Members {
 	function do_hide_posts( $query ) {
 		$hidden_posts = $this->get_hidden_posts();
 		if ( ! empty( $hidden_posts ) ) {
-			$query->set( 'post__not_in', $hidden_posts );
+			// Add hidden posts to post__not_in while maintaining any existing exclusions.
+			$post__not_in = array_merge( $query->query_vars['post__not_in'], $hidden_posts );
+			/**
+			 * Filter post__not_in.
+			 *
+			 * @since 3.3.4
+			 *
+			 * @param array $post__not_in
+			 */
+			$post__not_in = apply_filters( 'wpmem_post__not_in', $post__not_in );
+			$query->set( 'post__not_in', $post__not_in );
 		}
 		return $query;
 	}
@@ -1425,8 +1450,8 @@ class WP_Members {
 		
 		// Default Form Fields.
 		$default_form_fields = array(
-			'first_name'       => __( 'Ваше имя', 'wp-members' ),
-			'last_name'        => __( 'Ваша фамилия', 'wp-members' ),
+			'first_name'       => __( 'First Name', 'wp-members' ),
+			'last_name'        => __( 'Last Name', 'wp-members' ),
 			'addr1'            => __( 'Address 1', 'wp-members' ),
 			'addr2'            => __( 'Address 2', 'wp-members' ),
 			'city'             => __( 'City', 'wp-members' ),
@@ -1434,7 +1459,7 @@ class WP_Members {
 			'zip'              => __( 'Zip', 'wp-members' ),
 			'country'          => __( 'Country', 'wp-members' ),
 			'phone1'           => __( 'Day Phone', 'wp-members' ),
-			'user_email'       => __( 'Email почта', 'wp-members' ),
+			'user_email'       => __( 'Email', 'wp-members' ),
 			'confirm_email'    => __( 'Confirm Email', 'wp-members' ),
 			'user_url'         => __( 'Website', 'wp-members' ),
 			'description'      => __( 'Biographical Info', 'wp-members' ),
@@ -1456,49 +1481,49 @@ class WP_Members {
 		$defaults = array(
 			
 			// Login form.
-			'login_heading'        => __( 'Выполните вход', 'wp-members' ),
-			'login_username'       => __( 'Имя пользователя или E-mail', 'wp-members' ),
-			'login_password'       => __( 'Пароль', 'wp-members' ),
-			'login_button'         => __( 'Войти', 'wp-members' ),
-			'remember_me'          => __( 'Запомнить меня', 'wp-members' ),
-			'forgot_link_before'   => __( 'Неправильный пароль?', 'wp-members' ) . '&nbsp;',
-			'forgot_link'          => __( 'Нажмите для изменения', 'wp-members' ),
-			'register_link_before' => __( 'Не были на нашем сайте?', 'wp-members' ) . '&nbsp;',
-			'register_link'        => __( 'Нажмите для регистрации', 'wp-members' ),
+			'login_heading'        => __( 'Existing Users Log In', 'wp-members' ),
+			'login_username'       => __( 'Username or Email', 'wp-members' ),
+			'login_password'       => __( 'Password', 'wp-members' ),
+			'login_button'         => __( 'Log In', 'wp-members' ),
+			'remember_me'          => __( 'Remember Me', 'wp-members' ),
+			'forgot_link_before'   => __( 'Forgot password?', 'wp-members' ) . '&nbsp;',
+			'forgot_link'          => __( 'Click here to reset', 'wp-members' ),
+			'register_link_before' => __( 'New User?', 'wp-members' ) . '&nbsp;',
+			'register_link'        => __( 'Click here to register', 'wp-members' ),
 			
 			// Password change form.
-			'pwdchg_heading'       => __( 'Изменить пароль', 'wp-members' ),
-			'pwdchg_password1'     => __( 'Новый пароль', 'wp-members' ),
-			'pwdchg_password2'     => __( 'Повторите новый пароль', 'wp-members' ),
-			'pwdchg_button'        => __( 'Изменить пароль', 'wp-members' ),
+			'pwdchg_heading'       => __( 'Change Password', 'wp-members' ),
+			'pwdchg_password1'     => __( 'New password', 'wp-members' ),
+			'pwdchg_password2'     => __( 'Confirm new password', 'wp-members' ),
+			'pwdchg_button'        => __( 'Update Password', 'wp-members' ),
 			
 			// Password reset form.
-			'pwdreset_heading'     => __( 'Изменить забытый пароль', 'wp-members' ),
-			'pwdreset_username'    => __( 'Имя пользователя', 'wp-members' ),
-			'pwdreset_email'       => __( 'Email почта', 'wp-members' ),
-			'pwdreset_button'      => __( 'Изменить пароль' ),
-			'username_link_before' => __( 'Забыли имя пользователя?', 'wp-members' ) . '&nbsp;',
-			'username_link'        => __( 'Нажмите сюда', 'wp-members' ),
+			'pwdreset_heading'     => __( 'Reset Forgotten Password', 'wp-members' ),
+			'pwdreset_username'    => __( 'Username', 'wp-members' ),
+			'pwdreset_email'       => __( 'Email', 'wp-members' ),
+			'pwdreset_button'      => __( 'Reset Password' ),
+			'username_link_before' => __( 'Forgot username?', 'wp-members' ) . '&nbsp;',
+			'username_link'        => __( 'Click here', 'wp-members' ),
 			
 			// Retrieve username form.
-			'username_heading'     => __( 'Получить имя пользователя', 'wp-members' ),
-			'username_email'       => __( 'Email адрес', 'wp-members' ),
-			'username_button'      => __( 'Получить', 'wp-members' ),
+			'username_heading'     => __( 'Retrieve username', 'wp-members' ),
+			'username_email'       => __( 'Email Address', 'wp-members' ),
+			'username_button'      => __( 'Retrieve username', 'wp-members' ),
 			
 			// Register form.
-			'register_heading'     => __( 'Регистрация нового пользователя', 'wp-members' ),
+			'register_heading'     => __( 'New User Registration', 'wp-members' ),
 			'register_username'    => __( 'Choose a Username', 'wp-members' ),
 			'register_rscaptcha'   => __( 'Input the code:', 'wp-members' ),
 			'register_tos'         => __( 'Please indicate that you agree to the %s Terms of Service %s', 'wp-members' ), // @note: if default changes, default check after wpmem_tos_link_txt must change.
 			'register_clear'       => __( 'Reset Form', 'wp-members' ),
-			'register_submit'      => __( 'Регистрация', 'wp-members' ),
+			'register_submit'      => __( 'Register', 'wp-members' ),
 			'register_req_mark'    => '<span class="req">*</span>',
-			'register_required'    => '<span class="req">*</span>' . __( 'Обязательное поле', 'wp-members' ),
+			'register_required'    => '<span class="req">*</span>' . __( 'Required field', 'wp-members' ),
 			
 			// User profile update form.
-			'profile_heading'      => __( 'Редактировать информацию профиля', 'wp-members' ),
-			'profile_username'     => __( 'Имя пользователя', 'wp-members' ),
-			'profile_submit'       => __( 'Обновить профиль', 'wp-members' ),
+			'profile_heading'      => __( 'Edit Your Information', 'wp-members' ),
+			'profile_username'     => __( 'Username', 'wp-members' ),
+			'profile_submit'       => __( 'Update Profile', 'wp-members' ),
 			'profile_upload'       => __( 'Update this file', 'wp-members' ),
 			
 			// Error messages and dialogs.
@@ -1521,15 +1546,15 @@ class WP_Members {
 			'reg_file_type'        => __( 'Sorry, you can only upload the following file types for the %s field: %s.', 'wp-members' ),
 			
 			// Links.
-			'profile_edit'         => __( 'Редактировать мою информацию', 'wp-members' ),
-			'profile_password'     => __( 'Изменить пароль', 'wp-members' ),
-			'register_status'      => __( 'Вы вошли как %s', 'wp-members' ),
-			'register_logout'      => __( 'Выйти', 'wp-members' ),
-			'register_continue'    => ( isset( $wpmem->user_pages['profile'] ) && '' != $wpmem->user_pages['profile'] ) ? __( 'Изменить профиль', 'wp-members' ) : __( 'Главная страница', 'wp-members' ),
-			'login_welcome'        => __( 'Вы вошли как %s', 'wp-members' ),
-			'login_logout'         => __( 'Выход', 'wp-members' ),
+			'profile_edit'         => __( 'Edit My Information', 'wp-members' ),
+			'profile_password'     => __( 'Change Password', 'wp-members' ),
+			'register_status'      => __( 'You are logged in as %s', 'wp-members' ),
+			'register_logout'      => __( 'Log out', 'wp-members' ),
+			'register_continue'    => ( isset( $wpmem->user_pages['profile'] ) && '' != $wpmem->user_pages['profile'] ) ? __( 'Edit profile', 'wp-members' ) : __( 'Begin using the site.', 'wp-members' ),
+			'login_welcome'        => __( 'You are logged in as %s', 'wp-members' ),
+			'login_logout'         => __( 'Click to log out', 'wp-members' ),
 			'status_welcome'       => __( 'You are logged in as %s', 'wp-members' ),
-			'status_logout'        => __( 'Нажмите для выхода из профиля', 'wp-members' ),
+			'status_logout'        => __( 'click to log out', 'wp-members' ),
 			'menu_logout'          => __( 'Log Out', 'wp-members' ),
 			
 			// Widget.

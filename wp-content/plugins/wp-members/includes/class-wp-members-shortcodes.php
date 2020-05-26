@@ -130,6 +130,13 @@ class WP_Members_Shortcodes {
 					break;
 
 				case in_array( 'register', $atts ):
+					
+					// Set up register form args.
+					$reg_form_args = array( 'tag' => 'new' );
+					if ( isset( $redirect_to ) ) {
+						$reg_form_args['redirect_to'] = $redirect_to;
+					}
+					
 					if ( is_user_logged_in()  && '1' != $customizer ) {
 						/*
 						 * If the user is logged in, return any nested content (if any)
@@ -139,7 +146,7 @@ class WP_Members_Shortcodes {
 					} elseif ( is_user_logged_in() && is_customize_preview() && get_theme_mod( 'wpmem_show_form_message_dialog', false ) ) {
 						$wpmem_themsg = __( "This is a generic message to display the form message dialog in the Customizer.", 'wp-members' );
 						$content  = wpmem_inc_regmessage( $wpmem->regchk, $wpmem_themsg );
-						$content .= wpmem_register_form( 'new', $redirect_to );
+						$content .= wpmem_register_form( $reg_form_args );
 					} else {
 						if ( $wpmem->regchk == 'loginfailed' ) {
 							$content = wpmem_inc_loginfailed() . wpmem_inc_login( 'login', $redirect_to );
@@ -151,7 +158,7 @@ class WP_Members_Shortcodes {
 							$wpmem_themsg = __( 'There was an error with the CAPTCHA form.' ) . '<br /><br />' . $wpmem_captcha_err;
 						}
 						$content  = ( $wpmem_themsg || $wpmem->regchk == 'success' ) ? wpmem_inc_regmessage( $wpmem->regchk, $wpmem_themsg ) : '';
-						$content .= ( $wpmem->regchk == 'success' ) ? wpmem_inc_login( 'login', $redirect_to ) : wpmem_register_form( 'new', $redirect_to );
+						$content .= ( $wpmem->regchk == 'success' ) ? wpmem_inc_login( 'login', $redirect_to ) : wpmem_register_form( $reg_form_args );
 					}
 					break;
 
@@ -306,8 +313,8 @@ class WP_Members_Shortcodes {
 					} elseif ( true === $atts['msg'] || "true" === strtolower( $atts['msg'] ) ) {
 						$do_return = true;
 						$settings = array(
-							'wrapper_before' => '<div class="product_access_failed">',
-							'msg'            => sprintf( __( 'Sorry, your account does not currently have access to %s content', 'wp-members' ), $wpmem->membership->products[ $membership ]['title'] ),
+							'wrapper_before' => '<div class="product_restricted_msg">',
+							'msg'            => sprintf( $wpmem->get_text( 'product_restricted' ), $wpmem->membership->products[ $membership ]['title'] ),
 							'wrapper_after'  => '</div>',
 						);
 						/**
@@ -458,7 +465,11 @@ class WP_Members_Shortcodes {
 				break;
 
 			case "renew":
-				$content = wpmem_renew();
+				if ( function_exists( 'wpmem_renew' ) ) {
+					$content = wpmem_renew();
+				} else {
+					$content = '';
+				}
 				break;
 
 			default:

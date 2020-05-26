@@ -72,7 +72,7 @@ class WP_Members_Forms {
 		$placeholder = ( isset( $args['placeholder'] ) ) ? $args['placeholder'] : false;
 		$pattern     = ( isset( $args['pattern']     ) ) ? $args['pattern']     : false;
 		$title       = ( isset( $args['title']       ) ) ? $args['title']       : false;
-		$file_types  = ( isset( $args['file_types']  ) ) ? $args['file_types']      : false;
+		$file_types  = ( isset( $args['file_types']  ) ) ? $args['file_types']  : false;
 	
 		// Handle field creation by type.
 		switch ( $type ) { 
@@ -129,7 +129,7 @@ class WP_Members_Forms {
 				$accept = '';
 			}
 			$class  = ( 'textbox' == $class ) ? "file" : $this->sanitize_class( $class );
-			$str = "<input name=\"$name\" type=\"file\" id=\"$id\" value=\"" . esc_attr( $value ) . "\" class=\"$class\"$accept" . ( ( $required ) ? " required " : "" ) . ( ( 'image' == $file_type ) ? ' onchange="loadFile(event, this.id)"' : '' ) . ' />';
+			$str = "<input name=\"$name\" type=\"file\" id=\"$id\" value=\"" . esc_attr( $value ) . "\" class=\"$class\"$accept" . ( ( $required ) ? " required " : "" ) . ( ( 'image' == $type ) ? ' onchange="loadFile(event, this.id)"' : '' ) . ' />';
 			break;
 	
 		case "checkbox":
@@ -196,7 +196,7 @@ class WP_Members_Forms {
 				$chk = ( isset( $pieces[2] ) && '' == $compare ) ? $pieces[1] : '';
 				if ( isset( $pieces[1] ) && '' != $pieces[1] ) {
 					$id_value = esc_attr( $id . '[' . $pieces[1] . ']' );
-					$label = wpmem_form_label( array( 'meta_key'=>$id_value, 'label'=>esc_html( __( $pieces[0], 'wp-members' ) ), 'type'=>'radio', 'id'=>$id_value ) );
+					$label = wpmem_form_label( array( 'meta_key'=>$id_value, 'label'=>esc_html( __( $pieces[0], 'wp-members' ) ), 'type'=>'multicheckbox', 'id'=>$id_value ) );
 					$str = $str . $this->create_form_field( array(
 						'id'      => $id_value,
 						'name'    => $name . '[]',
@@ -1366,7 +1366,7 @@ class WP_Members_Forms {
 			 *
 			 * @param string The default edit mode heading.
 			 */
-			$heading = ( isset( $heading ) ) ? $headhing : apply_filters( 'wpmem_user_edit_heading', $wpmem->get_text( 'profile_heading' ) );			
+			$heading = ( isset( $heading ) && '' != $heading ) ? $heading : apply_filters( 'wpmem_user_edit_heading', $wpmem->get_text( 'profile_heading' ) );
 		} else {
 			/**
 			 * Filter the registration form heading.
@@ -1376,7 +1376,7 @@ class WP_Members_Forms {
 			 * @param string $str
 			 * @param string $tag Toggle new registration or profile update. new|edit.
 			 */
-			$heading = ( isset( $heading ) ) ? $headhing : apply_filters( 'wpmem_register_heading', $wpmem->get_text( 'register_heading' ), $tag );
+			$heading = ( isset( $heading ) && '' != $heading ) ? $heading : apply_filters( 'wpmem_register_heading', $wpmem->get_text( 'register_heading' ), $tag );
 		}
 		$form = $args['heading_before'] . $heading . $args['heading_after'] . $args['n'] . $form;
 

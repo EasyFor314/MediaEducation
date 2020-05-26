@@ -3,7 +3,7 @@ Contributors: cbutlerjr
 Tags: access, authentication, content, login, member, membership, password, protect, register, registration, restriction, subscriber
 Requires at least: 4.0
 Tested up to: 5.4
-Stable tag: 3.3.3
+Stable tag: 3.3.4.2
 License: GPLv2
 
 == Description ==
@@ -100,7 +100,7 @@ The FAQs are maintained at https://rocketgeek.com/plugins/wp-members/docs/faqs/
 
 == Upgrade Notice ==
 
-WP-Members 3.3.0 is a major update. WP-Members 3.3.3 is an improvement release. See changelog for important details. Minimum WP version is 4.0.
+WP-Members 3.3.0 is a major update. WP-Members 3.3.4 is an improvement release. See changelog for important details. Minimum WP version is 4.0.
 
 
 == Screenshots ==
@@ -123,6 +123,30 @@ WP-Members 3.3.0 is a major update. WP-Members 3.3.3 is an improvement release. 
 
 
 == Changelog ==
+
+= 3.3.4.2 =
+
+* Only run the woocommerce_form_field_{field_type} filter on fields in the WP-Members fields array (ignore all others).
+* Only run woocommerce_checkout_fields filter if user is not logged in (adds WP-Members fields to WC checkout, if user is logged in, data should be edited in profile).
+* Bug fix from 3.3.4 that caused register form heading to be empty when the register form shortcode is used.
+
+= 3.3.4.1 =
+
+* The 3.3.4 release contained some additional code used to debug the WooCommerce checkout. This causes an issue with the checkout process for general use. This update patches that by removing this code. You only need to update if you use WP-Members with WooCommerce.
+
+= 3.3.4 =
+
+* Updated pre_get_posts to merge post__not_in with any existing values. This will allow for better integration with other plugins (such as Search Exclude).
+* Updated pre_get_posts to fire later (20) in case another plugin is adding values to be excluded. This will prevent any hidden posts from being dropped by the other plugin's process.
+* Added wpmem_hidden_posts and wpmem_posts__not_in filters.
+* Fixed logic in upload input type (image or file) to correct undefined variable ($file_type).
+* Added function_exists check for wpmem_renew() (a PayPal extension function used in the core plugin).
+* Fixed function name typo for wpmem_a_extend_user() (a PayPal extension function used in the core plugin).
+* Updated product access shortcode error message to use the product_restricted message and changed the class to product_restricted_msg
+* Updated CAPTCHA class for more flexibility (can now be implemented into API for calling directly in the login or other forms).
+* Moved user export function from Admin API to User API.
+* Fixed adding WP-Members fields to WooCommerce checkout.
+
 
 = 3.3.3 =
 
