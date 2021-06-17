@@ -1481,29 +1481,29 @@ class WP_Members {
 		$defaults = array(
 			
 			// Login form.
-			'login_heading'        => __( 'Existing Users Log In', 'wp-members' ),
-			'login_username'       => __( 'Username or Email', 'wp-members' ),
-			'login_password'       => __( 'Password', 'wp-members' ),
-			'login_button'         => __( 'Log In', 'wp-members' ),
-			'remember_me'          => __( 'Remember Me', 'wp-members' ),
-			'forgot_link_before'   => __( 'Forgot password?', 'wp-members' ) . '&nbsp;',
-			'forgot_link'          => __( 'Click here to reset', 'wp-members' ),
-			'register_link_before' => __( 'New User?', 'wp-members' ) . '&nbsp;',
-			'register_link'        => __( 'Click here to register', 'wp-members' ),
+			'login_heading'        => __( 'Войдите в существующий аккаунт', 'wp-members' ),
+			'login_username'       => __( 'Имя пользователя или email', 'wp-members' ),
+			'login_password'       => __( 'Пароль', 'wp-members' ),
+			'login_button'         => __( 'Вход', 'wp-members' ),
+			'remember_me'          => __( 'Запомнить меня', 'wp-members' ),
+			'forgot_link_before'   => __( 'Забыл пароль?', 'wp-members' ) . '&nbsp;',
+			'forgot_link'          => __( 'Нажмите сюда чтобы сбросить', 'wp-members' ),
+			'register_link_before' => __( 'Новый пользователь?', 'wp-members' ) . '&nbsp;',
+			'register_link'        => __( 'Нажмите для регистрации', 'wp-members' ),
 			
 			// Password change form.
-			'pwdchg_heading'       => __( 'Change Password', 'wp-members' ),
-			'pwdchg_password1'     => __( 'New password', 'wp-members' ),
-			'pwdchg_password2'     => __( 'Confirm new password', 'wp-members' ),
-			'pwdchg_button'        => __( 'Update Password', 'wp-members' ),
+			'pwdchg_heading'       => __( 'Изменить пароль', 'wp-members' ),
+			'pwdchg_password1'     => __( 'Новый пароль', 'wp-members' ),
+			'pwdchg_password2'     => __( 'Подтвердить новый пароль', 'wp-members' ),
+			'pwdchg_button'        => __( 'Обновить пароль', 'wp-members' ),
 			
 			// Password reset form.
-			'pwdreset_heading'     => __( 'Reset Forgotten Password', 'wp-members' ),
-			'pwdreset_username'    => __( 'Username', 'wp-members' ),
+			'pwdreset_heading'     => __( 'Сбросить забытый пароль', 'wp-members' ),
+			'pwdreset_username'    => __( 'Пользователь', 'wp-members' ),
 			'pwdreset_email'       => __( 'Email', 'wp-members' ),
-			'pwdreset_button'      => __( 'Reset Password' ),
-			'username_link_before' => __( 'Forgot username?', 'wp-members' ) . '&nbsp;',
-			'username_link'        => __( 'Click here', 'wp-members' ),
+			'pwdreset_button'      => __( 'Сбросить пароль' ),
+			'username_link_before' => __( 'Забыл имя пользователя?', 'wp-members' ) . '&nbsp;',
+			'username_link'        => __( 'Нажмите сюда', 'wp-members' ),
 			
 			// Retrieve username form.
 			'username_heading'     => __( 'Retrieve username', 'wp-members' ),
@@ -1511,14 +1511,13 @@ class WP_Members {
 			'username_button'      => __( 'Retrieve username', 'wp-members' ),
 			
 			// Register form.
-			'register_heading'     => __( 'New User Registration', 'wp-members' ),
-			'register_username'    => __( 'Choose a Username', 'wp-members' ),
-			'register_rscaptcha'   => __( 'Input the code:', 'wp-members' ),
-			'register_tos'         => __( 'Please indicate that you agree to the %s Terms of Service %s', 'wp-members' ), // @note: if default changes, default check after wpmem_tos_link_txt must change.
-			'register_clear'       => __( 'Reset Form', 'wp-members' ),
-			'register_submit'      => __( 'Register', 'wp-members' ),
+			'register_heading'     => __( 'Новый пользователь', 'wp-members' ),
+			'register_username'    => __( 'Введите имя пользователя', 'wp-members' ),
+			'register_rscaptcha'   => __( 'Вставьте код', 'wp-members' ),
+			'register_tos'         => __( 'Сбросить форму', 'wp-members' ),
+			'register_submit'      => __( 'Регистрация', 'wp-members' ),
 			'register_req_mark'    => '<span class="req">*</span>',
-			'register_required'    => '<span class="req">*</span>' . __( 'Required field', 'wp-members' ),
+			'register_required'    => '<span class="req">*</span>' . __( 'Необходимо заполнить', 'wp-members' ),
 			
 			// User profile update form.
 			'profile_heading'      => __( 'Edit Your Information', 'wp-members' ),
@@ -1546,8 +1545,8 @@ class WP_Members {
 			'reg_file_type'        => __( 'Sorry, you can only upload the following file types for the %s field: %s.', 'wp-members' ),
 			
 			// Links.
-			'profile_edit'         => __( 'Edit My Information', 'wp-members' ),
-			'profile_password'     => __( 'Change Password', 'wp-members' ),
+			'profile_edit'         => __( 'Изменить мою информацию', 'wp-members' ),
+			'profile_password'     => __( 'Изменить пароль', 'wp-members' ),
 			'register_status'      => __( 'You are logged in as %s', 'wp-members' ),
 			'register_logout'      => __( 'Log out', 'wp-members' ),
 			'register_continue'    => ( isset( $wpmem->user_pages['profile'] ) && '' != $wpmem->user_pages['profile'] ) ? __( 'Edit profile', 'wp-members' ) : __( 'Begin using the site.', 'wp-members' ),

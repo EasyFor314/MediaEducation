@@ -390,7 +390,7 @@ function rc_change_password_form( $args = array() ) {
 				<input type="hidden" name="rc_password_reset_login" value="<?php echo esc_attr( $login ); ?>"/>
 				<input type="hidden" name="rc_redirect" value="<?php echo esc_url( $args['redirect'] ); ?>"/>
 				<input type="hidden" name="rc_password_nonce" value="<?php echo wp_create_nonce('rc-password-nonce' ); ?>"/>
-				<input id="rc_password_submit" type="submit" value="<?php esc_attr_e( 'Change Password', 'restrict-content' ); ?>"/>
+				<input id="rc_password_submit" type="submit" value="<?php esc_attr_e( 'Изменить пароль', 'restrict-content' ); ?>"/>
 			</p>
 		</fieldset>
 	</form>

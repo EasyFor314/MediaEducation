@@ -259,7 +259,7 @@
         $wqt_message     = $quizz_setting->get_option('wqt_submit_meg');
 
         if( empty($wqt_message) ) {
-            $wqt_message = __('Your quizz has been sent successfully', 'wqt');
+            $wqt_message = __('Ваш тест успешно отправлен', 'wqt');
         }
         return $wqt_message;
     }

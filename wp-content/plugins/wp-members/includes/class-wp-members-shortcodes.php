@@ -714,7 +714,7 @@ class WP_Members_Shortcodes {
 			// Logout link shortcode.
 		if ( is_user_logged_in() && $tag == 'wpmem_logout' ) {
 			$link = ( isset( $atts['url'] ) ) ? add_query_arg( array( 'a'=>'logout', 'redirect_to'=>$atts['url'] ) ) : add_query_arg( 'a', 'logout' );
-			$text = ( $content ) ? $content : __( 'Click here to log out.', 'wp-members' );
+			$text = ( $content ) ? $content : __( 'Нажмите сюда чтобы выйти.', 'wp-members' );
 			return do_shortcode( '<a href="' . esc_url( $link ) . '">' . $text . '</a>' );
 		}
 	}
